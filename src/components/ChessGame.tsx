@@ -1,40 +1,78 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, LogIn, LogOut } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import Auth from './Auth';
 
 export default function ChessGame() {
   const [game, setGame] = useState(new Chess());
-  // We use this to force re-render when game state changes
   const [fen, setFen] = useState(game.fen());
+  const [user, setUser] = useState<any>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [isGameSaved, setIsGameSaved] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const saveGameResult = useCallback(async (gameInstance: Chess) => {
+    if (!user || isGameSaved) return;
+
+    const result = gameInstance.isCheckmate() 
+      ? (gameInstance.turn() === 'w' ? 'Black wins' : 'White wins')
+      : 'Draw';
+
+    const { error } = await supabase.from('games').insert({
+      user_id: user.id,
+      result: result,
+      pgn: gameInstance.pgn()
+    });
+
+    if (!error) {
+      setIsGameSaved(true);
+      console.log('Game saved successfully');
+    } else {
+      console.error('Error saving game:', error);
+    }
+  }, [user, isGameSaved]);
 
   const makeMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
     try {
-      // make a copy to ensure state update
       const gameCopy = new Chess(game.fen());
       const result = gameCopy.move(move);
       
       if (result) {
         setGame(gameCopy);
         setFen(gameCopy.fen());
+
+        if (gameCopy.isGameOver()) {
+          saveGameResult(gameCopy);
+        }
         return true;
       }
     } catch (e) {
-      // Invalid move
       return false;
     }
     return false;
-  }, [game]);
+  }, [game, saveGameResult]);
 
   const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
     if (!targetSquare) return false;
     const move = makeMove({
       from: sourceSquare,
       to: targetSquare,
-      promotion: 'q', // always promote to queen for simplicity
+      promotion: 'q',
     });
     
-    // illegal move
     if (!move) return false;
     return true;
   };
@@ -43,6 +81,7 @@ export default function ChessGame() {
     const newGame = new Chess();
     setGame(newGame);
     setFen(newGame.fen());
+    setIsGameSaved(false);
   };
 
   const getGameStatus = () => {
@@ -53,7 +92,32 @@ export default function ChessGame() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 p-4 relative">
+      
+      {/* Auth Button */}
+      <div className="absolute top-4 right-4 z-10">
+        {user ? (
+          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full pl-4 pr-2 py-1.5 shadow-lg">
+            <span className="text-sm text-zinc-400 font-medium hidden sm:inline">{user.email}</span>
+            <button 
+              onClick={() => supabase.auth.signOut()}
+              className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-100 transition-colors"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setShowAuth(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 rounded-full transition-all font-semibold shadow-lg hover:scale-105"
+          >
+            <LogIn className="w-4 h-4" />
+            Login
+          </button>
+        )}
+      </div>
+
       <div className="max-w-2xl w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-6 md:p-8 space-y-6">
         
         {/* Header */}
@@ -64,7 +128,7 @@ export default function ChessGame() {
           </div>
           <button 
             onClick={resetGame}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-md transition-colors text-sm font-medium border border-zinc-700 hover:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-md transition-colors text-sm font-medium border border-zinc-700 hover:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
@@ -79,6 +143,11 @@ export default function ChessGame() {
               {getGameStatus()}
             </span>
           </div>
+          {isGameSaved && (
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30">
+              Game Saved
+            </span>
+          )}
         </div>
 
         {/* Board Container */}
@@ -88,14 +157,15 @@ export default function ChessGame() {
               position: fen, 
               onPieceDrop: onDrop,
               boardOrientation: "white",
-              darkSquareStyle: { backgroundColor: '#3f3f46' }, // zinc-700
-              lightSquareStyle: { backgroundColor: '#a1a1aa' }, // zinc-400
+              darkSquareStyle: { backgroundColor: '#3f3f46' },
+              lightSquareStyle: { backgroundColor: '#a1a1aa' },
               animationDurationInMs: 200,
             }}
           />
         </div>
-
       </div>
+
+      {showAuth && <Auth onClose={() => setShowAuth(false)} />}
     </div>
   );
 }

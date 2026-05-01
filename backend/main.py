@@ -35,7 +35,7 @@ async def analyze_game(data: GameData):
     
     try:
         # Using gemini-flash-latest as confirmed working for the user's key
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        model = genai.GenerativeModel("models/gemini-flash-latest")
         prompt = f"Ты — дерзкий шахматный тренер. Найди главную ошибку в этой партии и дай совет на одну фразу. Вот PGN партии: {data.pgn}"
         
         response = model.generate_content(prompt)

@@ -326,12 +326,20 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                     print(f"Move error: {e}")
 
     except WebSocketDisconnect:
+        print(f"[WS] {email} disconnected from room {room_id}")
         if email in room["connections"]:
             del room["connections"][email]
         
-        # Notify opponent
-        for p_email, conn in room["connections"].items():
-            await conn.send_json({"type": "opponent_disconnected"})
+        # Wait briefly before broadcasting - player might reconnect
+        await asyncio.sleep(2)
+        
+        # Notify opponent only if player is still gone
+        if email not in room["connections"]:
+            for p_email, conn in room["connections"].items():
+                try:
+                    await conn.send_json({"type": "opponent_disconnected"})
+                except:
+                    pass
         
         # If no one left, clean up
         if not room["connections"]:

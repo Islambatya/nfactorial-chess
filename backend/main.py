@@ -168,10 +168,14 @@ async def get_room(room_id: str):
     }
 
 # WebSocket logic
-@app.websocket("/ws/game/{room_id}/{token}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str, token: str):
-    email = await get_current_user_email(token)
+@app.websocket("/ws/game/{room_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str):
+    token = websocket.query_params.get("token")
+    print(f"[WS] Connection request for room {room_id} with token: {token[:10] if token else 'None'}...")
+    
+    email = await get_current_user_email(token) if token else None
     if not email:
+        print(f"[WS] Connection rejected: Invalid token")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

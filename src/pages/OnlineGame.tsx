@@ -110,7 +110,7 @@ export default function OnlineGame() {
     };
   }, [roomId, token]);
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
+  const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
     if (status !== 'playing') {
       console.log("[OnlineGame] Move ignored: not in playing status");
       return false;
@@ -121,7 +121,7 @@ export default function OnlineGame() {
     }
 
     try {
-      const move = { from: sourceSquare, to: targetSquare, promotion: 'q' };
+      const move = { from: sourceSquare, to: targetSquare as string, promotion: 'q' };
       const gameCopy = new Chess(game.fen());
       const moveResult = gameCopy.move(move);
       
@@ -240,14 +240,12 @@ export default function OnlineGame() {
 
           <div className="w-full aspect-square max-w-[500px] mx-auto overflow-hidden rounded-xl border-8 border-zinc-800 shadow-2xl bg-zinc-800/20">
             <Chessboard 
-              options={{
-                position: fen, 
-                onPieceDrop: onDrop,
-                boardOrientation: playerColor || "white",
-                darkSquareStyle: { backgroundColor: '#3f3f46' },
-                lightSquareStyle: { backgroundColor: '#a1a1aa' },
-                animationDurationInMs: 200,
-              }}
+              position={fen}
+              onPieceDrop={onDrop}
+              boardOrientation={playerColor || "white"}
+              customDarkSquareStyle={{ backgroundColor: '#3f3f46' }}
+              customLightSquareStyle={{ backgroundColor: '#a1a1aa' }}
+              animationDuration={200}
             />
           </div>
         </div>

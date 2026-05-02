@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import MenuPage from './pages/MenuPage';
 import ChessGame from './components/ChessGame';
+import OnlineLobby from './pages/OnlineLobby';
+import OnlineGame from './pages/OnlineGame';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token, isLoading } = useAuth();
@@ -25,6 +27,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <MenuPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/online" 
+        element={
+          <ProtectedRoute>
+            <OnlineLobby />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/online/game/:roomId" 
+        element={
+          <ProtectedRoute>
+            <OnlineGame />
           </ProtectedRoute>
         } 
       />

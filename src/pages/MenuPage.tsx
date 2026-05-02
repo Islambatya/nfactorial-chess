@@ -47,20 +47,18 @@ export default function MenuPage() {
 
           {/* Online Card */}
           <button
-            onClick={() => alert('Online Mode: Coming Soon!')}
-            className="group relative bg-zinc-900/40 border border-zinc-800/50 rounded-3xl p-8 transition-all hover:border-zinc-700/50 overflow-hidden text-left"
+            onClick={() => navigate('/online')}
+            className="group relative bg-zinc-900 border border-zinc-800 rounded-3xl p-8 transition-all hover:border-zinc-600 hover:scale-[1.02] overflow-hidden text-left"
           >
-            <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center mb-6">
-              <Globe className="text-zinc-600 w-8 h-8" />
+            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
+              <Globe className="text-zinc-100 w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-zinc-600 mb-2">Online</h2>
-            <p className="text-zinc-600 text-sm leading-relaxed">
+            <h2 className="text-2xl font-bold text-zinc-50 mb-2">Online</h2>
+            <p className="text-zinc-500 text-sm leading-relaxed">
               Find opponents from around the world and climb the leaderboards.
             </p>
-            <div className="mt-8">
-              <span className="bg-zinc-800/80 text-zinc-500 text-[10px] px-3 py-1 rounded-full uppercase tracking-widest font-bold border border-zinc-700">
-                Coming Soon
-              </span>
+            <div className="mt-8 flex items-center text-zinc-300 font-semibold group-hover:translate-x-2 transition-transform">
+              Join Lobby →
             </div>
           </button>
         </div>

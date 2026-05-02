@@ -1,8 +1,11 @@
 import os
 import sqlite3
+import secrets
+import json
+import asyncio
 from datetime import datetime, timedelta
-from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends, status
+from typing import Optional, Dict, List, Set
+from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr
@@ -10,6 +13,7 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from dotenv import load_dotenv
 import google.generativeai as genai
+import chess
 
 # Load environment variables
 load_dotenv()
@@ -58,6 +62,15 @@ def init_db():
 
 init_db()
 
+# Gemini Configuration
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+
+# In-memory room storage
+# room_id -> { "players": [email1, email2], "board": chess.Board, "connections": {email: WebSocket} }
+rooms: Dict[str, dict] = {}
+
 # Models
 class UserCreate(BaseModel):
     email: EmailStr
@@ -75,6 +88,9 @@ class Token(BaseModel):
 class GameData(BaseModel):
     pgn: str
 
+class RoomResponse(BaseModel):
+    room_id: str
+
 # Helper functions
 def get_user(email: str):
     conn = get_db()
@@ -84,32 +100,31 @@ def get_user(email: str):
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Gemini Configuration
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+async def get_current_user_email(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        return email
+    except JWTError:
+        return None
 
-# Endpoints
+# REST Endpoints
 @app.post("/register", response_model=Token)
 async def register(user: UserCreate):
     if get_user(user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    
     hashed_password = pwd_context.hash(user.password)
     conn = get_db()
     conn.execute("INSERT INTO users (email, hashed_password) VALUES (?, ?)", (user.email, hashed_password))
     conn.commit()
     conn.close()
-    
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
 
 @app.post("/login", response_model=Token)
@@ -117,15 +132,145 @@ async def login(user: UserLogin):
     db_user = get_user(user.email)
     if not db_user or not pwd_context.verify(user.password, db_user["hashed_password"]):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    
-    access_token = create_access_token(data={"sub": user.email})
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
+
+@app.post("/rooms/create", response_model=RoomResponse)
+async def create_room():
+    room_id = secrets.token_hex(3).upper()  # 6-char code
+    while room_id in rooms:
+        room_id = secrets.token_hex(3).upper()
+    rooms[room_id] = {
+        "players": [],
+        "board": chess.Board(),
+        "connections": {},
+        "status": "waiting"
+    }
+    return {"room_id": room_id}
+
+@app.post("/rooms/join/{room_id}")
+async def join_room(room_id: str):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if len(rooms[room_id]["players"]) >= 2:
+        raise HTTPException(status_code=400, detail="Room is full")
+    return {"status": "ok"}
+
+@app.get("/rooms/{room_id}")
+async def get_room(room_id: str):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="Room not found")
+    room = rooms[room_id]
+    return {
+        "room_id": room_id,
+        "players_count": len(room["players"]),
+        "status": room["status"]
+    }
+
+# WebSocket logic
+@app.websocket("/ws/game/{room_id}/{token}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str, token: str):
+    email = await get_current_user_email(token)
+    if not email:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    if room_id not in rooms:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    room = rooms[room_id]
+    
+    if email not in room["players"]:
+        if len(room["players"]) >= 2:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+        room["players"].append(email)
+
+    room["connections"][email] = websocket
+    await websocket.accept()
+
+    # Determine color
+    color = "white" if room["players"][0] == email else "black"
+    
+    # Notify others
+    for p_email, conn in room["connections"].items():
+        if p_email != email:
+            await conn.send_json({
+                "type": "opponent_joined",
+                "username": email
+            })
+        
+    # Send initial state
+    await websocket.send_json({
+        "type": "state",
+        "fen": room["board"].fen(),
+        "turn": "white" if room["board"].turn == chess.WHITE else "black",
+        "color": color,
+        "opponent": room["players"][0] if color == "black" else (room["players"][1] if len(room["players"]) > 1 else None)
+    })
+
+    if len(room["players"]) == 2:
+        room["status"] = "full"
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data["type"] == "move":
+                # Validate turn
+                board = room["board"]
+                is_white_turn = board.turn == chess.WHITE
+                if (is_white_turn and color != "white") or (not is_white_turn and color != "black"):
+                    continue
+
+                try:
+                    move = chess.Move.from_uci(data["from"] + data["to"] + (data.get("promotion") or ""))
+                    if move in board.legal_moves:
+                        board.push(move)
+                        
+                        # Broadcast state update
+                        response = {
+                            "type": "state",
+                            "fen": board.fen(),
+                            "turn": "white" if board.turn == chess.WHITE else "black",
+                            "lastMove": {"from": data["from"], "to": data["to"]}
+                        }
+                        for conn in room["connections"].values():
+                            await conn.send_json(response)
+                        
+                        # Check for game over
+                        if board.is_game_over():
+                            result = "draw"
+                            if board.is_checkmate():
+                                result = "white_wins" if not is_white_turn else "black_wins"
+                            
+                            game_over_msg = {
+                                "type": "game_over",
+                                "result": result,
+                                "reason": str(board.outcome().termination)
+                            }
+                            for conn in room["connections"].values():
+                                await conn.send_json(game_over_msg)
+                except Exception as e:
+                    print(f"Move error: {e}")
+
+    except WebSocketDisconnect:
+        if email in room["connections"]:
+            del room["connections"][email]
+        
+        # Notify opponent
+        for p_email, conn in room["connections"].items():
+            await conn.send_json({"type": "opponent_disconnected"})
+        
+        # If no one left, clean up
+        if not room["connections"]:
+            if room_id in rooms:
+                del rooms[room_id]
 
 @app.post("/analyze-game")
 async def analyze_game(data: GameData):
     if not api_key:
         raise HTTPException(status_code=500, detail="AI Coach is disabled (API Key missing)")
-    
     try:
         model = genai.GenerativeModel("models/gemini-flash-latest")
         prompt = f"Ты — дерзкий шахматный тренер. Найди главную ошибку в этой партии и дай совет на одну фразу. Вот PGN партии: {data.pgn}"

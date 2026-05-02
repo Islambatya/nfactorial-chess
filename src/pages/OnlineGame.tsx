@@ -20,9 +20,15 @@ export default function OnlineGame() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const socketRef = useRef<WebSocket | null>(null);
+  
+  // Ref to always have the latest status in stale closures (onclose)
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const connectWebSocket = useCallback(() => {
-    // Debug logs as requested
+    // Debug logs
     console.log('[DEBUG] token:', token || localStorage.getItem('token'));
     console.log('[DEBUG] roomId:', roomId);
 
@@ -33,6 +39,16 @@ export default function OnlineGame() {
       return;
     }
 
+    // Close existing connection if any
+    if (socketRef.current) {
+      console.log("[OnlineGame] Closing existing socket...");
+      socketRef.current.onopen = null;
+      socketRef.current.onmessage = null;
+      socketRef.current.onerror = null;
+      socketRef.current.onclose = null;
+      socketRef.current.close();
+    }
+
     try {
       const wsUrl = `ws://localhost:8000/ws/game/${roomId}?token=${token}`;
       console.log(`[OnlineGame] Connecting to WebSocket: ${wsUrl.split('?')[0]}?[TOKEN]`);
@@ -40,10 +56,12 @@ export default function OnlineGame() {
       socketRef.current = ws;
 
       ws.onopen = () => {
+        if (socketRef.current !== ws) return;
         console.log("[OnlineGame] WebSocket Connected Successfully");
       };
 
       ws.onmessage = (event) => {
+        if (socketRef.current !== ws) return;
         try {
           const data = JSON.parse(event.data);
           console.log("[OnlineGame] Received WebSocket message:", data.type, data);
@@ -85,6 +103,7 @@ export default function OnlineGame() {
       };
 
       ws.onerror = (event) => {
+        if (socketRef.current !== ws) return;
         console.error("[OnlineGame] WebSocket Error:", event);
         setStatus('error');
         setErrorMsg("Connection failed. Check if the backend is running.");
@@ -92,8 +111,13 @@ export default function OnlineGame() {
 
       ws.onclose = (event) => {
         console.log("[OnlineGame] WebSocket Closed:", event.code, event.reason);
-        if (status !== 'game_over' && status !== 'error' && status !== 'disconnected') {
-          setStatus('disconnected');
+        // Only set disconnected if THIS is the current active socket
+        if (socketRef.current === ws) {
+          if (statusRef.current !== 'game_over' && 
+              statusRef.current !== 'error' && 
+              statusRef.current !== 'disconnected') {
+            setStatus('disconnected');
+          }
         }
       };
     } catch (err: any) {
@@ -101,13 +125,20 @@ export default function OnlineGame() {
       setStatus('error');
       setErrorMsg(err.message || "Failed to initialize connection.");
     }
-  }, [roomId, token, status]);
+  }, [roomId, token]);
 
   useEffect(() => {
     connectWebSocket();
     return () => {
-      console.log("[OnlineGame] Cleaning up WebSocket");
-      socketRef.current?.close();
+      if (socketRef.current) {
+        console.log("[OnlineGame] Cleaning up WebSocket handlers and closing...");
+        socketRef.current.onopen = null;
+        socketRef.current.onmessage = null;
+        socketRef.current.onerror = null;
+        socketRef.current.onclose = null;
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     };
   }, [roomId, token]);
 

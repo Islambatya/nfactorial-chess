@@ -68,8 +68,42 @@ if api_key:
     genai.configure(api_key=api_key)
 
 # In-memory room storage
-# room_id -> { "players": [email1, email2], "board": chess.Board, "connections": {email: WebSocket} }
 rooms: Dict[str, dict] = {}
+ROOMS_FILE = "rooms_data.json"
+
+def save_rooms():
+    try:
+        serializable = {}
+        for room_id, room in rooms.items():
+            serializable[room_id] = {
+                "players": room["players"],
+                "fen": room["board"].fen(),
+                "status": room.get("status", "waiting")
+            }
+        with open(ROOMS_FILE, "w") as f:
+            json.dump(serializable, f)
+        print(f"[Rooms] Saved {len(rooms)} rooms to {ROOMS_FILE}")
+    except Exception as e:
+        print(f"[Rooms] Error saving: {e}")
+
+def load_rooms():
+    if os.path.exists(ROOMS_FILE):
+        try:
+            with open(ROOMS_FILE) as f:
+                data = json.load(f)
+            for room_id, room in data.items():
+                rooms[room_id] = {
+                    "players": room["players"],
+                    "board": chess.Board(room["fen"]),
+                    "connections": {},
+                    "status": room["status"]
+                }
+            print(f"[Rooms] Loaded {len(rooms)} rooms from {ROOMS_FILE}")
+        except Exception as e:
+            print(f"[Rooms] Error loading: {e}")
+
+# Initial load
+load_rooms()
 
 # Models
 class UserCreate(BaseModel):
@@ -156,6 +190,7 @@ async def create_room(email: str = Depends(get_current_user_email)):
         "connections": {},
         "status": "waiting"
     }
+    save_rooms()
     return {"room_id": room_id}
 
 @app.post("/rooms/join/{room_id}")
@@ -170,6 +205,7 @@ async def join_room(room_id: str, email: str = Depends(get_current_user_email)):
     
     room["players"].append(email)
     room["status"] = "full"
+    save_rooms()
     return {"status": "ok"}
 
 @app.get("/rooms/{room_id}")
@@ -269,6 +305,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                         for p_email, conn in room["connections"].items():
                             p_color = "white" if room["players"][0] == p_email else "black"
                             await conn.send_json({**response, "color": p_color})
+                        
+                        save_rooms()
                         
                         # Check for game over
                         if board.is_game_over():

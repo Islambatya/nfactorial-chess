@@ -16,28 +16,44 @@ export default function OnlineLobby() {
   // Polling for room status if a room was created
   useEffect(() => {
     if (!createdRoomId) return
-    
-    console.log('Polling started for:', createdRoomId)
-    const tokenToUse = token || localStorage.getItem('token')
-    
+
+    const tokenToUse = token || localStorage.getItem('token') 
+    console.log('[Lobby] Starting polling for room:', createdRoomId)
+
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/rooms/${createdRoomId}`, {
-          headers: { Authorization: `Bearer ${tokenToUse}` }
-        })
-        const data = await res.json()
-        console.log('Room status:', data.status) // debug log
+        // Ensure roomId is clean
+        const cleanRoomId = createdRoomId.split(':')[0].trim()
         
-        if (data.status === 'full') {
+        const res = await fetch(`http://localhost:8000/rooms/${cleanRoomId}`, {
+          headers: { 
+            'Authorization': `Bearer ${tokenToUse}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!res.ok) {
+          console.error('[Lobby] Poll failed:', res.status)
+          return
+        }
+        
+        const data = await res.json()
+        console.log('[Lobby] Room status:', data)
+        
+        if (data.status === 'full' || data.players_count >= 2) {
+          console.log('[Lobby] Room is full! Navigating to game...')
           clearInterval(interval)
-          navigate(`/online/game/${createdRoomId}`)
+          navigate(`/online/game/${cleanRoomId}`)
         }
       } catch (e) {
-        console.error('Polling error:', e)
+        console.error('[Lobby] Polling error:', e)
       }
-    }, 2000)
-    
-    return () => clearInterval(interval)
+    }, 1500)
+
+    return () => {
+      console.log('[Lobby] Stopping polling')
+      clearInterval(interval)
+    }
   }, [createdRoomId, navigate, token]);
 
   const createRoom = async () => {
@@ -50,8 +66,10 @@ export default function OnlineLobby() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Failed to create room');
-      setCreatedRoomId(data.room_id);
-      console.log("Room created:", data.room_id);
+      
+      const roomId = data.room_id.split(':')[0].trim();
+      setCreatedRoomId(roomId);
+      console.log("[Lobby] createdRoomId set to:", roomId);
     } catch (err: any) {
       setError(err.message);
     } finally {

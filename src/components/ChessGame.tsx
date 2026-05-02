@@ -1,32 +1,20 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { RotateCcw, LogIn, LogOut, Sparkles, BrainCircuit, X } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
-import Auth from './Auth';
-import GameHistory from './GameHistory';
+import { RotateCcw, LogOut, Sparkles, BrainCircuit, X, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function ChessGame() {
   const [game, setGame] = useState(new Chess());
   const [fen, setFen] = useState(game.fen());
-  const [user, setUser] = useState<any>(null);
-  const [showAuth, setShowAuth] = useState(false);
   const [isGameSaved, setIsGameSaved] = useState(false);
   const [coachTip, setCoachTip] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCoachModal, setShowCoachModal] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleAnalysis = useCallback(async (pgn: string) => {
     setIsAnalyzing(true);
@@ -49,7 +37,7 @@ export default function ChessGame() {
       setShowCoachModal(true);
     } catch (err: any) {
       console.error("Analysis error:", err);
-      setCoachTip(`Ошибка ИИ: ${err.message}. Убедитесь, что бэкенд запущен!`);
+      setCoachTip(`AI Error: ${err.message}. Make sure backend is running!`);
       setShowCoachModal(true);
     } finally {
       setIsAnalyzing(false);
@@ -58,25 +46,12 @@ export default function ChessGame() {
 
   const saveGameResult = useCallback(async (gameInstance: Chess) => {
     if (isGameSaved) return;
-
-    const result = gameInstance.isCheckmate() 
-      ? (gameInstance.turn() === 'w' ? 'Black wins' : 'White wins')
-      : 'Draw';
-
-    if (user) {
-      const { error } = await supabase.from('games').insert({
-        user_id: user.id,
-        result: result,
-        pgn: gameInstance.pgn()
-      });
-
-      if (!error) {
-        setIsGameSaved(true);
-      }
-    }
-
+    
+    // We could save results to a local DB or backend here if needed
+    // For now, we just trigger analysis as per requirement
+    setIsGameSaved(true);
     handleAnalysis(gameInstance.pgn());
-  }, [user, isGameSaved, handleAnalysis]);
+  }, [isGameSaved, handleAnalysis]);
 
   const makeMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
     try {
@@ -128,27 +103,28 @@ export default function ChessGame() {
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-950 p-4 relative overflow-y-auto pt-16 sm:pt-20">
+      {/* Header Info */}
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <button 
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-full transition-all text-sm font-medium"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Menu
+        </button>
+      </div>
+
       <div className="absolute top-4 right-4 z-10">
-        {user ? (
-          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full pl-4 pr-2 py-1.5 shadow-lg">
-            <span className="text-sm text-zinc-400 font-medium hidden sm:inline">{user.email}</span>
-            <button 
-              onClick={() => supabase.auth.signOut()}
-              className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-100 transition-colors"
-              title="Выйти"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
+        <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-full pl-4 pr-2 py-1.5 shadow-lg">
+          <span className="text-sm text-zinc-400 font-medium hidden sm:inline">{user?.email}</span>
           <button 
-            onClick={() => setShowAuth(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-950 rounded-full transition-all font-semibold shadow-lg hover:scale-105"
+            onClick={logout}
+            className="p-1.5 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-100 transition-colors"
+            title="Logout"
           >
-            <LogIn className="w-4 h-4" />
-            Login
+            <LogOut className="w-4 h-4" />
           </button>
-        )}
+        </div>
       </div>
 
       <div className="max-w-2xl w-full space-y-6 pb-12">
@@ -195,8 +171,6 @@ export default function ChessGame() {
             />
           </div>
         </div>
-
-        {user && <GameHistory userId={user.id} />}
       </div>
 
       {showCoachModal && coachTip && (
@@ -226,8 +200,6 @@ export default function ChessGame() {
           </div>
         </div>
       )}
-
-      {showAuth && <Auth onClose={() => setShowAuth(false)} />}
     </div>
   );
 }

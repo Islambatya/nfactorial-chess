@@ -104,13 +104,23 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user_email(token: str):
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+async def get_current_user_email(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
-            return None
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         return email
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+# WebSocket version (doesn't raise HTTPException but returns None)
+async def get_ws_user_email(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload.get("sub")
     except JWTError:
         return None
 
@@ -136,12 +146,12 @@ async def login(user: UserLogin):
     return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
 
 @app.post("/rooms/create", response_model=RoomResponse)
-async def create_room():
+async def create_room(email: str = Depends(get_current_user_email)):
     room_id = secrets.token_hex(3).upper()  # 6-char code
     while room_id in rooms:
         room_id = secrets.token_hex(3).upper()
     rooms[room_id] = {
-        "players": [],
+        "players": [email],
         "board": chess.Board(),
         "connections": {},
         "status": "waiting"
@@ -149,11 +159,17 @@ async def create_room():
     return {"room_id": room_id}
 
 @app.post("/rooms/join/{room_id}")
-async def join_room(room_id: str):
+async def join_room(room_id: str, email: str = Depends(get_current_user_email)):
     if room_id not in rooms:
         raise HTTPException(status_code=404, detail="Room not found")
-    if len(rooms[room_id]["players"]) >= 2:
+    room = rooms[room_id]
+    if email in room["players"]:
+        return {"status": "already_in"}
+    if len(room["players"]) >= 2:
         raise HTTPException(status_code=400, detail="Room is full")
+    
+    room["players"].append(email)
+    room["status"] = "full"
     return {"status": "ok"}
 
 @app.get("/rooms/{room_id}")
@@ -171,11 +187,8 @@ async def get_room(room_id: str):
 @app.websocket("/ws/game/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     token = websocket.query_params.get("token")
-    print(f"[WS] Connection request for room {room_id} with token: {token[:10] if token else 'None'}...")
-    
-    email = await get_current_user_email(token) if token else None
+    email = await get_ws_user_email(token) if token else None
     if not email:
-        print(f"[WS] Connection rejected: Invalid token")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

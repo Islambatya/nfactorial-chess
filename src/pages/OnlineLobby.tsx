@@ -19,9 +19,12 @@ export default function OnlineLobby() {
     if (createdRoomId) {
       interval = window.setInterval(async () => {
         try {
-          const response = await fetch(`http://localhost:8000/rooms/${createdRoomId}`);
+          const response = await fetch(`http://localhost:8000/rooms/${createdRoomId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           const data = await response.json();
           if (data.status === 'full') {
+            console.log("Room is now full! Navigating...");
             clearInterval(interval);
             navigate(`/online/game/${createdRoomId}`);
           }
@@ -31,7 +34,7 @@ export default function OnlineLobby() {
       }, 2000);
     }
     return () => clearInterval(interval);
-  }, [createdRoomId, navigate]);
+  }, [createdRoomId, navigate, token]);
 
   const createRoom = async () => {
     setLoading(true);
@@ -67,7 +70,7 @@ export default function OnlineLobby() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Room not found or full');
       
-      console.log("Joined room:", formattedId);
+      console.log("Successfully joined room. Navigating to game...");
       navigate(`/online/game/${formattedId}`);
     } catch (err: any) {
       setError(err.message);
@@ -93,7 +96,7 @@ export default function OnlineLobby() {
           </div>
           
           <div className="space-y-2">
-            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Loader2 className="text-zinc-100 w-8 h-8 animate-spin" />
             </div>
             <h1 className="text-3xl font-black text-zinc-50 tracking-tight italic">WAITING...</h1>
@@ -187,7 +190,7 @@ export default function OnlineLobby() {
               </button>
             </div>
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center font-bold uppercase tracking-wider animate-shake">
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center font-bold uppercase tracking-wider">
                 {error}
               </div>
             )}

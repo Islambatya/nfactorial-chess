@@ -73,16 +73,14 @@ export default function ChessGame() {
     return false;
   }, [game, saveGameResult]);
 
-  const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (!targetSquare) return false;
+  const onDrop = (sourceSquare: string, targetSquare: string) => {
     const move = makeMove({
       from: sourceSquare,
       to: targetSquare,
       promotion: 'q',
     });
     
-    if (!move) return false;
-    return true;
+    return !!move;
   };
 
   const resetGame = () => {
@@ -166,6 +164,7 @@ export default function ChessGame() {
               customDarkSquareStyle={{ backgroundColor: '#3f3f46' }}
               customLightSquareStyle={{ backgroundColor: '#a1a1aa' }}
               animationDuration={200}
+              arePiecesDraggable={game.turn() === 'w'}
             />
           </div>
         </div>

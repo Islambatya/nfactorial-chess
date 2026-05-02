@@ -57,8 +57,6 @@ export default function OnlineGame() {
               if (data.opponent) {
                 setOpponent(data.opponent);
                 setStatus('playing');
-              } else {
-                setStatus('waiting');
               }
               break;
             case 'opponent_joined':
@@ -113,19 +111,31 @@ export default function OnlineGame() {
     };
   }, [roomId, token]);
 
-  const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (status !== 'playing') return false;
-    if (turn !== playerColor) return false;
+  const onDrop = (sourceSquare: string, targetSquare: string) => {
+    console.log(`[OnlineGame] onDrop called: from ${sourceSquare} to ${targetSquare}`);
+    
+    if (status !== 'playing') {
+      console.log("[OnlineGame] Move blocked: status is", status);
+      return false;
+    }
+    
+    if (turn !== playerColor) {
+      console.log(`[OnlineGame] Not your turn. Turn: ${turn}, Color: ${playerColor}`);
+      return false;
+    }
 
     try {
-      const move = { from: sourceSquare, to: targetSquare as string, promotion: 'q' };
+      const move = { from: sourceSquare, to: targetSquare, promotion: 'q' };
       const gameCopy = new Chess(game.fen());
       const moveResult = gameCopy.move(move);
       
-      if (!moveResult) return false;
+      if (!moveResult) {
+        console.log("[OnlineGame] Illegal move attempted locally");
+        return false;
+      }
 
-      // Send to server
       if (socketRef.current?.readyState === WebSocket.OPEN) {
+        console.log("[OnlineGame] Sending move to server:", move);
         socketRef.current.send(JSON.stringify({
           type: 'move',
           from: sourceSquare,
@@ -136,6 +146,7 @@ export default function OnlineGame() {
       }
       return false;
     } catch (e) {
+      console.error("[OnlineGame] onDrop error:", e);
       return false;
     }
   };
@@ -244,6 +255,7 @@ export default function OnlineGame() {
               customDarkSquareStyle={{ backgroundColor: '#3f3f46' }}
               customLightSquareStyle={{ backgroundColor: '#a1a1aa' }}
               animationDuration={200}
+              arePiecesDraggable={playerColor === turn && status === 'playing'}
             />
           </div>
         </div>

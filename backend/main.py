@@ -266,8 +266,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                             "turn": "white" if board.turn == chess.WHITE else "black",
                             "lastMove": {"from": data["from"], "to": data["to"]}
                         }
-                        for conn in room["connections"].values():
-                            await conn.send_json(response)
+                        for p_email, conn in room["connections"].items():
+                            p_color = "white" if room["players"][0] == p_email else "black"
+                            await conn.send_json({**response, "color": p_color})
                         
                         # Check for game over
                         if board.is_game_over():
@@ -280,8 +281,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                                 "result": result,
                                 "reason": str(board.outcome().termination)
                             }
-                            for conn in room["connections"].values():
-                                await conn.send_json(game_over_msg)
+                            for p_email, conn in room["connections"].items():
+                                p_color = "white" if room["players"][0] == p_email else "black"
+                                await conn.send_json({**game_over_msg, "color": p_color})
                 except Exception as e:
                     print(f"Move error: {e}")
 

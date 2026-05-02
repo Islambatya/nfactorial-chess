@@ -15,25 +15,29 @@ export default function OnlineLobby() {
 
   // Polling for room status if a room was created
   useEffect(() => {
-    let interval: number;
-    if (createdRoomId) {
-      interval = window.setInterval(async () => {
-        try {
-          const response = await fetch(`http://localhost:8000/rooms/${createdRoomId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const data = await response.json();
-          if (data.status === 'full') {
-            console.log("Room is now full! Navigating...");
-            clearInterval(interval);
-            navigate(`/online/game/${createdRoomId}`);
-          }
-        } catch (err) {
-          console.error("Polling error:", err);
+    if (!createdRoomId) return
+    
+    console.log('Polling started for:', createdRoomId)
+    const tokenToUse = token || localStorage.getItem('token')
+    
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/rooms/${createdRoomId}`, {
+          headers: { Authorization: `Bearer ${tokenToUse}` }
+        })
+        const data = await res.json()
+        console.log('Room status:', data.status) // debug log
+        
+        if (data.status === 'full') {
+          clearInterval(interval)
+          navigate(`/online/game/${createdRoomId}`)
         }
-      }, 2000);
-    }
-    return () => clearInterval(interval);
+      } catch (e) {
+        console.error('Polling error:', e)
+      }
+    }, 2000)
+    
+    return () => clearInterval(interval)
   }, [createdRoomId, navigate, token]);
 
   const createRoom = async () => {

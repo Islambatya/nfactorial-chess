@@ -184,47 +184,61 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
         return
 
     room = rooms[room_id]
+    print(f"[WS] Room {room_id} status: {room['status']}, Players: {room['players']}")
     
     if email not in room["players"]:
         if len(room["players"]) >= 2:
+            print(f"[WS] Room {room_id} is full. Rejecting {email}")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
         room["players"].append(email)
+        print(f"[WS] Player {email} added to room {room_id}")
 
     room["connections"][email] = websocket
     await websocket.accept()
+    print(f"[WS] Connection accepted for {email} in room {room_id}")
 
     # Determine color
     color = "white" if room["players"][0] == email else "black"
+    print(f"[WS] Assigned {color} to {email}")
     
     # Notify others
     for p_email, conn in room["connections"].items():
         if p_email != email:
+            print(f"[WS] Notifying {p_email} that {email} joined")
             await conn.send_json({
                 "type": "opponent_joined",
                 "username": email
             })
         
     # Send initial state
+    opponent_email = None
+    if len(room["players"]) > 1:
+        opponent_email = room["players"][1] if color == "white" else room["players"][0]
+
     await websocket.send_json({
         "type": "state",
         "fen": room["board"].fen(),
         "turn": "white" if room["board"].turn == chess.WHITE else "black",
         "color": color,
-        "opponent": room["players"][0] if color == "black" else (room["players"][1] if len(room["players"]) > 1 else None)
+        "opponent": opponent_email
     })
+    print(f"[WS] Initial state sent to {email}")
 
     if len(room["players"]) == 2:
         room["status"] = "full"
+        print(f"[WS] Room {room_id} is now FULL")
 
     try:
         while True:
             data = await websocket.receive_json()
+            print(f"[WS] Received from {email}: {data}")
             if data["type"] == "move":
                 # Validate turn
                 board = room["board"]
                 is_white_turn = board.turn == chess.WHITE
                 if (is_white_turn and color != "white") or (not is_white_turn and color != "black"):
+                    print(f"[WS] Illegal turn: {email} tried to move but it is {board.turn} turn")
                     continue
 
                 try:

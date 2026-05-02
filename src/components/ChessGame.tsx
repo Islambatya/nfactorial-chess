@@ -160,14 +160,12 @@ export default function ChessGame() {
 
           <div className="w-full aspect-square max-w-[600px] mx-auto overflow-hidden rounded-md border-4 border-zinc-800 shadow-inner bg-zinc-800/20">
             <Chessboard 
-              options={{
-                position: fen, 
-                onPieceDrop: onDrop,
-                boardOrientation: "white",
-                darkSquareStyle: { backgroundColor: '#3f3f46' },
-                lightSquareStyle: { backgroundColor: '#a1a1aa' },
-                animationDurationInMs: 200,
-              }}
+              position={fen}
+              onPieceDrop={onDrop}
+              boardOrientation="white"
+              customDarkSquareStyle={{ backgroundColor: '#3f3f46' }}
+              customLightSquareStyle={{ backgroundColor: '#a1a1aa' }}
+              animationDuration={200}
             />
           </div>
         </div>

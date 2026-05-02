@@ -22,10 +22,14 @@ export default function OnlineGame() {
   const socketRef = useRef<WebSocket | null>(null);
 
   const connectWebSocket = useCallback(() => {
+    // Debug logs as requested
+    console.log('[DEBUG] token:', token || localStorage.getItem('token'));
+    console.log('[DEBUG] roomId:', roomId);
+
     if (!roomId || !token) {
       console.error("[OnlineGame] Missing roomId or token", { roomId, token });
       setStatus('error');
-      setErrorMsg("Session error. Please login again.");
+      setErrorMsg("Authentication session missing. Please login again.");
       return;
     }
 
@@ -42,20 +46,19 @@ export default function OnlineGame() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("[OnlineGame] Message received:", data.type, data);
+          console.log("[OnlineGame] Received WebSocket message:", data.type, data);
           
           switch (data.type) {
             case 'state':
               setFen(data.fen);
               setGame(new Chess(data.fen));
               setTurn(data.turn);
-              if (data.color) {
-                console.log("[OnlineGame] Assigned color:", data.color);
-                setPlayerColor(data.color);
-              }
+              if (data.color) setPlayerColor(data.color);
               if (data.opponent) {
                 setOpponent(data.opponent);
                 setStatus('playing');
+              } else {
+                setStatus('waiting');
               }
               break;
             case 'opponent_joined':
@@ -79,14 +82,14 @@ export default function OnlineGame() {
               break;
           }
         } catch (err) {
-          console.error("[OnlineGame] Failed to parse message:", err);
+          console.error("[OnlineGame] Error parsing message:", err);
         }
       };
 
-      ws.onerror = (err) => {
-        console.error("[OnlineGame] WebSocket Error:", err);
+      ws.onerror = (event) => {
+        console.error("[OnlineGame] WebSocket Error:", event);
         setStatus('error');
-        setErrorMsg("Connection failed. Make sure the backend server is running.");
+        setErrorMsg("Connection failed. Check if the backend is running.");
       };
 
       ws.onclose = (event) => {
@@ -96,50 +99,43 @@ export default function OnlineGame() {
         }
       };
     } catch (err: any) {
-      console.error("[OnlineGame] Exception during connection:", err);
+      console.error("[OnlineGame] WebSocket Exception:", err);
       setStatus('error');
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || "Failed to initialize connection.");
     }
   }, [roomId, token, status]);
 
   useEffect(() => {
     connectWebSocket();
     return () => {
-      console.log("[OnlineGame] Component unmounting, closing socket");
+      console.log("[OnlineGame] Cleaning up WebSocket");
       socketRef.current?.close();
     };
   }, [roomId, token]);
 
   const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
-    if (status !== 'playing') {
-      console.log("[OnlineGame] Move ignored: not in playing status");
-      return false;
-    }
-    if (turn !== playerColor) {
-      console.log("[OnlineGame] Move ignored: not your turn", { turn, playerColor });
-      return false;
-    }
+    if (status !== 'playing') return false;
+    if (turn !== playerColor) return false;
 
     try {
       const move = { from: sourceSquare, to: targetSquare as string, promotion: 'q' };
       const gameCopy = new Chess(game.fen());
       const moveResult = gameCopy.move(move);
       
-      if (!moveResult) {
-        console.log("[OnlineGame] Move ignored: illegal move", move);
-        return false;
-      }
+      if (!moveResult) return false;
 
-      console.log("[OnlineGame] Sending move:", move);
-      socketRef.current?.send(JSON.stringify({
-        type: 'move',
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q'
-      }));
-      return true;
+      // Send to server
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'move',
+          from: sourceSquare,
+          to: targetSquare,
+          promotion: 'q'
+        }));
+        return true;
+      }
+      return false;
     } catch (e) {
-      console.error("[OnlineGame] Move error:", e);
       return false;
     }
   };
@@ -160,7 +156,7 @@ export default function OnlineGame() {
             <AlertCircle className="w-10 h-10 text-red-500" />
           </div>
           <h2 className="text-2xl font-bold text-zinc-50">Connection Error</h2>
-          <p className="text-zinc-500">{errorMsg || "Could not establish connection to the game server."}</p>
+          <p className="text-zinc-500">{errorMsg || "Connection to game server failed."}</p>
           <div className="grid gap-3 pt-4">
             <button 
               onClick={() => { setStatus('waiting'); connectWebSocket(); }}
@@ -194,6 +190,7 @@ export default function OnlineGame() {
       </div>
 
       <div className="max-w-2xl w-full space-y-6 pb-12">
+        {/* Opponent Info */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${playerColor === 'black' ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
@@ -215,14 +212,15 @@ export default function OnlineGame() {
           )}
         </div>
 
+        {/* Board Container */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl p-6 md:p-8 space-y-6 relative overflow-hidden">
           {status === 'waiting' && (
             <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-center p-8 space-y-4">
-              <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center animate-bounce">
+              <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center animate-bounce shadow-2xl">
                 <Loader2 className="w-8 h-8 text-zinc-100 animate-spin" />
               </div>
               <h3 className="text-2xl font-bold text-zinc-50">Waiting for Opponent</h3>
-              <p className="text-zinc-500 max-w-xs">Share the code with a friend to start.</p>
+              <p className="text-zinc-500 max-w-xs">Share the code above with a friend to start the duel.</p>
             </div>
           )}
 
@@ -233,7 +231,7 @@ export default function OnlineGame() {
                 {turn === playerColor ? 'YOUR TURN' : "OPPONENT'S TURN"}
               </span>
             </div>
-            <div className="text-zinc-500 text-xs font-mono bg-zinc-800/30 px-3 py-1 rounded-md uppercase">
+            <div className="text-zinc-500 text-xs font-mono bg-zinc-800/30 px-3 py-1 rounded-md uppercase tracking-wider">
               ONLINE: {playerColor}
             </div>
           </div>
@@ -250,6 +248,7 @@ export default function OnlineGame() {
           </div>
         </div>
 
+        {/* Your Info */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${playerColor === 'white' ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>

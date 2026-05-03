@@ -215,7 +215,7 @@ async def get_ws_user_email(token: str):
 async def register(user: UserCreate):
     if get_user(user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    hashed_password = pwd_context.hash(user.password)
+    hashed_password = pwd_context.hash(user.password[:72])
     username = (user.username or "").strip() or user.email.split("@", 1)[0]
     conn = get_db()
     conn.execute("INSERT INTO users (email, hashed_password, username) VALUES (?, ?, ?)", 
@@ -232,7 +232,7 @@ async def login(user: UserLogin):
     if not db_user:
         print(f"[AUTH] Login failed: User not found: {user.email}")
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    if not pwd_context.verify(user.password, db_user["hashed_password"]):
+    if not pwd_context.verify(user.password[:72], db_user["hashed_password"]):
         print(f"[AUTH] Login failed: Invalid password for: {user.email}")
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     

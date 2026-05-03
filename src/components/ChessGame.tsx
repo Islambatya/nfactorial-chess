@@ -170,7 +170,7 @@ export default function ChessGame() {
           <AnyChessboard 
             position={fen} 
             onPieceDrop={onDrop}
-            arePiecesDraggable={selectedTime !== null}
+            arePiecesDraggable={selectedTime !== null && !isGameOver}
             boardOrientation="white"
             customDarkSquareStyle={{ backgroundColor: '#b58863' }}
             customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}

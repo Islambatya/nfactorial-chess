@@ -126,22 +126,42 @@ export default function OnlineGame() {
   }, [roomId, token]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    console.log(`[OnlineGame] onDrop attempt: ${sourceSquare}->${targetSquare}, status: ${status}, turn: ${turn}, playerColor: ${playerColor}`);
+    const gameCopy = new Chess(fen);
+    const currentTurn = gameCopy.turn() === 'w' ? 'white' : 'black';
     
-    if (status !== 'playing') return false;
-    if (turn !== playerColor) return false;
+    console.log(`[OnlineGame] Drop attempt: ${sourceSquare}->${targetSquare}`);
+    console.log(`[OnlineGame] Status: ${status}, Game Turn: ${currentTurn}, Player Color: ${playerColor}`);
+    
+    if (status !== 'playing') {
+      console.log("[OnlineGame] Move rejected: Game not in playing state");
+      return false;
+    }
+    
+    if (currentTurn !== playerColor) {
+      console.log("[OnlineGame] Move rejected: Not your turn");
+      return false;
+    }
 
     try {
-      const gameCopy = new Chess(fen);
       const moveResult = gameCopy.move({
         from: sourceSquare,
         to: targetSquare,
         promotion: 'q'
       });
       
-      if (!moveResult) return false;
+      if (!moveResult) {
+        console.log("[OnlineGame] Move rejected: Illegal move");
+        return false;
+      }
+
+      // Optimistic update to prevent snap-back
+      const newFen = gameCopy.fen();
+      setFen(newFen);
+      setTurn(gameCopy.turn() === 'w' ? 'white' : 'black');
+      setGame(new Chess(newFen));
 
       if (socketRef.current?.readyState === WebSocket.OPEN) {
+        console.log("[OnlineGame] Sending move to server...");
         socketRef.current.send(JSON.stringify({
           type: 'move',
           from: sourceSquare,
@@ -152,6 +172,7 @@ export default function OnlineGame() {
       }
       return false;
     } catch (e) {
+      console.error("[OnlineGame] Move exception:", e);
       return false;
     }
   };

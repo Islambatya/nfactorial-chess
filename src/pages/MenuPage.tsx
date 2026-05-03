@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Users, Globe, LogOut, Clock, Crown } from 'lucide-react';
+import { Users, Globe, LogOut, Clock, Crown, Brain } from 'lucide-react';
 
 export default function MenuPage() {
   const { user, logout } = useAuth();
@@ -33,7 +33,7 @@ export default function MenuPage() {
           <p className="text-zinc-500 text-xl font-medium uppercase tracking-[0.2em]">Choose your game mode</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Two Players Card */}
           <div className="group relative bg-[#312e2b] border-2 border-transparent rounded-3xl p-8 transition-all hover:border-[#81b64c] shadow-xl text-left flex flex-col h-full">
             <div className="w-20 h-20 bg-[#262421] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-zinc-800">
@@ -48,6 +48,23 @@ export default function MenuPage() {
               className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg text-center text-lg"
             >
               Play Locally
+            </button>
+          </div>
+
+          {/* Quiz Chess Card */}
+          <div className="group relative bg-[#312e2b] border-2 border-transparent rounded-3xl p-8 transition-all hover:border-[#81b64c] shadow-xl text-left flex flex-col h-full">
+            <div className="w-20 h-20 bg-[#262421] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-zinc-800">
+              <Brain className="text-[#81b64c] w-10 h-10" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Quiz Chess 🧠</h2>
+            <p className="text-zinc-500 text-sm leading-relaxed mb-8 flex-grow">
+              Answer trivia questions before every move. Wrong = skip turn!
+            </p>
+            <button
+              onClick={() => navigate('/quiz-game')}
+              className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] text-center text-lg"
+            >
+              Play Quiz Mode
             </button>
           </div>
 

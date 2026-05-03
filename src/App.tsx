@@ -8,6 +8,7 @@ import OnlineLobby from './pages/OnlineLobby';
 import OnlineGame from './pages/OnlineGame';
 import HistoryPage from './pages/HistoryPage';
 import PremiumPage from './pages/PremiumPage';
+import QuizGame from './pages/QuizGame';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token, isLoading } = useAuth();
@@ -55,6 +56,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ChessGame />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/quiz-game" 
+        element={
+          <ProtectedRoute>
+            <QuizGame />
           </ProtectedRoute>
         } 
       />

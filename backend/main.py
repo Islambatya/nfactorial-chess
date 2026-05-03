@@ -35,6 +35,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f"[HTTP] {request.method} {request.url}")
+    if request.method == "POST":
+        try:
+            body = await request.body()
+            print(f"[HTTP] Body: {body.decode()}")
+        except:
+            pass
+    response = await call_next(request)
+    print(f"[HTTP] Response status: {response.status_code}")
+    return response
+
 # Auth configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -112,11 +125,11 @@ load_rooms()
 
 # Models
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class Token(BaseModel):
@@ -259,8 +272,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
         print(f"[WS] Player {email} added to room {room_id}")
 
     room["connections"][email] = websocket
-    await websocket.accept()
-    print(f"[WS] Connection accepted for {email} in room {room_id}")
+    print(f"[WS] Connection established for {email} in room {room_id}")
 
     # Determine color
     color = "white" if room["players"][0] == email else "black"

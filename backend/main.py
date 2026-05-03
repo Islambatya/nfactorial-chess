@@ -63,9 +63,14 @@ def init_db():
 init_db()
 
 # Gemini Configuration
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+gemini_model = genai.GenerativeModel("models/gemini-flash-latest")
+
+print("Available Gemini Models:")
+for m in genai.list_models():
+    if 'generateContent' in m.supported_generation_methods:
+        print(m.name)
 
 # In-memory room storage
 rooms: Dict[str, dict] = {}
@@ -348,12 +353,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
 
 @app.post("/analyze-game")
 async def analyze_game(data: GameData):
-    if not api_key:
-        raise HTTPException(status_code=500, detail="AI Coach is disabled (API Key missing)")
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
         prompt = f"You are a sassy chess coach. Find the biggest mistake in this game and give one sentence of advice. Here is the PGN of the game: {data.pgn}"
-        response = model.generate_content(prompt)
+        response = gemini_model.generate_content(prompt)
         return {"analysis": response.text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

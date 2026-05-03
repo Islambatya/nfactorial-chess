@@ -126,7 +126,7 @@ export default function ChessGame() {
     return false;
   }, [game, isGameOver, finishGame]);
 
-  const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
+  const onDrop = (sourceSquare: string, targetSquare: string) => {
     if (!targetSquare) return false;
     return makeMove({ from: sourceSquare, to: targetSquare, promotion: 'q' });
   };
@@ -159,20 +159,22 @@ export default function ChessGame() {
     setShowCoachModal(false);
   };
 
+  // AnyChessboard hack for TS
+  const AnyChessboard = Chessboard as any;
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#262421] text-white overflow-hidden">
       {/* Board Area */}
       <div className="flex-1 h-full flex items-center justify-center p-4">
         <div className="w-full max-w-[calc(100vh-40px)] aspect-square relative shadow-2xl">
-          <Chessboard 
-            options={{
-              position: fen, 
-              onPieceDrop: onDrop,
-              boardOrientation: "white",
-              darkSquareStyle: { backgroundColor: '#b58863' },
-              lightSquareStyle: { backgroundColor: '#f0d9b5' },
-              animationDurationInMs: 200,
-            }}
+          <AnyChessboard 
+            position={fen} 
+            onPieceDrop={onDrop}
+            arePiecesDraggable={selectedTime !== null}
+            boardOrientation="white"
+            customDarkSquareStyle={{ backgroundColor: '#b58863' }}
+            customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
+            animationDuration={200}
           />
           
           {/* End Game Modal */}

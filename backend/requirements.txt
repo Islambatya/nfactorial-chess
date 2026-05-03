@@ -9,3 +9,5 @@ python-multipart
 email-validator
 chess
 websockets
+google-generativeai
+python-dotenv

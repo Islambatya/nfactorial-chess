@@ -275,7 +275,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     print(f"[WS] Connection established for {email} in room {room_id}")
 
     # Determine color
-    color = "w" if room["players"][0] == email else "b"
+    color = "white" if room["players"][0] == email else "black"
     print(f"[WS] Assigned {color} to {email}")
     
     # Notify others
@@ -295,7 +295,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await websocket.send_json({
         "type": "state",
         "fen": room["board"].fen(),
-        "turn": room["board"].turn,
+        "turn": "white" if room["board"].turn == chess.WHITE else "black",
         "color": color,
         "opponent": opponent_email
     })

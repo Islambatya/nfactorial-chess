@@ -10,8 +10,8 @@ export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
   const [, setGame] = useState(new Chess());
   const [fen, setFen] = useState('start');
-  const [playerColor, setPlayerColor] = useState<'w' | 'b' | null>(null);
-  const [turn, setTurn] = useState<'w' | 'b'>('w');
+  const [playerColor, setPlayerColor] = useState<'white' | 'black' | null>(null);
+  const [turn, setTurn] = useState<'white' | 'black'>('white');
   const [opponent, setOpponent] = useState<string | null>(null);
   const [status, setStatus] = useState<'waiting' | 'playing' | 'game_over' | 'disconnected' | 'error'>('waiting');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -201,12 +201,12 @@ export default function OnlineGame() {
           {/* Opponent Info */}
           <div className="flex items-center justify-between bg-chess-card px-4 py-3 rounded-lg border border-zinc-700/50 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${playerColor === 'b' ? 'bg-[#f0d9b5] text-zinc-950' : 'bg-[#b58863] text-white'} font-bold text-xs shadow-inner`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${playerColor === 'black' ? 'bg-[#f0d9b5] text-zinc-950' : 'bg-[#b58863] text-white'} font-bold text-xs shadow-inner`}>
                 {opponent?.[0]?.toUpperCase() || '?'}
               </div>
               <div className="flex flex-col -space-y-1">
                 <p className="text-white font-bold">{opponent || 'Opponent'}</p>
-                <p className="text-chess-secondary text-xs">({playerColor === 'w' ? 'Black' : 'White'})</p>
+                <p className="text-chess-secondary text-xs">({playerColor === 'white' ? 'Black' : 'White'})</p>
               </div>
             </div>
             {status === 'waiting' && (
@@ -239,10 +239,10 @@ export default function OnlineGame() {
                   arePiecesDraggable={true}
                   isDraggablePiece={({ piece }: any) => {
                     const isWhitePiece = piece.startsWith('w');
-                    return playerColor === 'w' ? isWhitePiece : !isWhitePiece;
+                    return playerColor === 'white' ? isWhitePiece : !isWhitePiece;
                   }}
                   onPieceDrop={onDrop}
-                  boardOrientation={playerColor === 'b' ? "black" : "white"}
+                  boardOrientation={playerColor === 'black' ? "black" : "white"}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}
                   customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
                   animationDuration={200}
@@ -254,12 +254,12 @@ export default function OnlineGame() {
           {/* Your Info */}
           <div className="flex items-center justify-between bg-chess-card px-4 py-3 rounded-lg border border-zinc-700/50 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${playerColor === 'w' ? 'bg-[#f0d9b5] text-zinc-950' : 'bg-[#b58863] text-white'} font-bold text-xs shadow-inner`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${playerColor === 'white' ? 'bg-[#f0d9b5] text-zinc-950' : 'bg-[#b58863] text-white'} font-bold text-xs shadow-inner`}>
                 {user?.username?.[0]?.toUpperCase()}
               </div>
               <div className="flex flex-col -space-y-1">
                 <p className="text-white font-bold">{user?.username}</p>
-                <p className="text-chess-secondary text-xs">({playerColor === 'w' ? 'White' : 'Black'})</p>
+                <p className="text-chess-secondary text-xs">({playerColor === 'white' ? 'White' : 'Black'})</p>
               </div>
             </div>
           </div>
@@ -276,9 +276,9 @@ export default function OnlineGame() {
             <div className="bg-chess-input rounded-lg p-4 border border-zinc-700/50 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 px-4 py-2 bg-[#262421] rounded-full border border-zinc-800 shadow-inner">
-                  <div className={`w-3 h-3 rounded-full ${turn === 'w' ? 'bg-[#f0d9b5]' : 'bg-[#b58863]'}`} />
+                  <div className={`w-3 h-3 rounded-full ${turn === 'white' ? 'bg-[#f0d9b5]' : 'bg-[#b58863]'}`} />
                   <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                    {turn === 'w' ? "White's Turn" : "Black's Turn"}
+                    {turn === 'white' ? "White's Turn" : "Black's Turn"}
                   </span>
                 </div>
               </div>

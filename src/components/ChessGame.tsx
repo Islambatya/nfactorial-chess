@@ -70,7 +70,7 @@ export default function ChessGame() {
   const saveGame = useCallback(async (gameInstance: Chess, gameWinner: string) => {
     if (!token) return;
     try {
-      await fetch(`${getApiUrl()}/history`, {
+      await fetch(`${getApiUrl()}/history/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({

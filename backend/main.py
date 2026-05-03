@@ -80,6 +80,11 @@ def init_db():
             played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # Add owner_email column if it doesn't exist yet
+    try:
+        conn.execute("ALTER TABLE game_history ADD COLUMN owner_email TEXT")
+    except Exception:
+        pass  # Column already exists
     conn.commit()
     conn.close()
 
@@ -156,6 +161,12 @@ class SaveGameData(BaseModel):
     black_player: str
     pgn: str
     result: str
+
+class GameHistoryData(BaseModel):
+    white_player: str
+    black_player: str
+    pgn: str = ""
+    result: str = ""
 
 class RoomResponse(BaseModel):
     room_id: str
@@ -397,16 +408,30 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                 del rooms[room_id]
 
 @app.post("/history")
-async def save_game(data: SaveGameData, email: str = Depends(get_current_user_email)):
+async def save_game_legacy(data: SaveGameData, email: str = Depends(get_current_user_email)):
     try:
         conn = get_db()
         conn.execute(
-            "INSERT INTO game_history (white_player, black_player, pgn, result) VALUES (?, ?, ?, ?)",
-            (data.white_player, data.black_player, data.pgn, data.result)
+            "INSERT INTO game_history (white_player, black_player, pgn, result, owner_email) VALUES (?, ?, ?, ?, ?)",
+            (data.white_player, data.black_player, data.pgn, data.result, email)
         )
         conn.commit()
         conn.close()
         return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/history/save")
+async def save_game(data: GameHistoryData, email: str = Depends(get_current_user_email)):
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO game_history (white_player, black_player, pgn, result, owner_email) VALUES (?, ?, ?, ?, ?)",
+            (data.white_player, data.black_player, data.pgn, data.result, email)
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -417,9 +442,9 @@ async def get_history(email: str = Depends(get_current_user_email)):
         rows = conn.execute(
             """SELECT id, white_player, black_player, pgn, result, played_at
                FROM game_history
-               WHERE white_player = ? OR black_player = ?
+               WHERE owner_email = ?
                ORDER BY played_at DESC""",
-            (email, email)
+            (email,)
         ).fetchall()
         conn.close()
         return [dict(row) for row in rows]

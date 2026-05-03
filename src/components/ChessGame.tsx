@@ -41,7 +41,15 @@ export default function ChessGame() {
   const navigate = useNavigate();
   const { token } = useAuth();
 
-  const pieceTheme = localStorage.getItem('pieceTheme') || 'classic';
+  const [pieceTheme, setPieceTheme] = useState(localStorage.getItem('pieceTheme') || 'classic');
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setPieceTheme(localStorage.getItem('pieceTheme') || 'classic');
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
   const PIECES = ['wP','wN','wB','wR','wQ','wK','bP','bN','bB','bR','bQ','bK'] as const;
   const customPieces = pieceTheme !== 'classic'
     ? Object.fromEntries(

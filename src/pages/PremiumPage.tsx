@@ -53,6 +53,7 @@ export default function PremiumPage() {
 
   const handleActivate = () => {
     localStorage.setItem('pieceTheme', selectedTheme);
+    window.dispatchEvent(new Event('storage'));
     setSaved(true);
   };
 

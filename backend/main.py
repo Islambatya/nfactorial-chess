@@ -234,9 +234,9 @@ async def get_room(room_id: str):
 # WebSocket logic
 @app.websocket("/ws/game/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
+    await websocket.accept()
     token = websocket.query_params.get("token")
     email = await get_ws_user_email(token) if token else None
-    await websocket.accept()
     print(f"[WS] Connection handshake accepted for {email or 'unknown'} in room {room_id}")
 
     if not email:

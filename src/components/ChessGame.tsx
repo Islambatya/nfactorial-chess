@@ -127,7 +127,7 @@ export default function ChessGame() {
   }, [game, isGameOver, finishGame]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    if (!targetSquare) return false;
+    if (!selectedTime || !targetSquare) return false;
     return makeMove({ from: sourceSquare, to: targetSquare, promotion: 'q' });
   };
 
@@ -170,7 +170,7 @@ export default function ChessGame() {
           <AnyChessboard 
             position={fen} 
             onPieceDrop={onDrop}
-            arePiecesDraggable={selectedTime !== null && !isGameOver}
+            arePiecesDraggable={true}
             boardOrientation="white"
             customDarkSquareStyle={{ backgroundColor: '#b58863' }}
             customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}

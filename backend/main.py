@@ -178,10 +178,17 @@ async def register(user: UserCreate):
 
 @app.post("/login", response_model=Token)
 async def login(user: UserLogin):
+    print(f"[AUTH] Login attempt for: {user.email}")
     db_user = get_user(user.email)
-    if not db_user or not pwd_context.verify(user.password, db_user["hashed_password"]):
+    if not db_user:
+        print(f"[AUTH] Login failed: User not found: {user.email}")
         raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if not pwd_context.verify(user.password, db_user["hashed_password"]):
+        print(f"[AUTH] Login failed: Invalid password for: {user.email}")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    
     access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    print(f"[AUTH] Login successful for: {user.email}")
     return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
 
 @app.post("/rooms/create", response_model=RoomResponse)

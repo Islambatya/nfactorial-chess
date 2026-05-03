@@ -97,10 +97,11 @@ export default function OnlineGame() {
 
       ws.onclose = () => {
         if (socketRef.current === ws) {
-          if (statusRef.current !== 'game_over' && 
-              statusRef.current !== 'error' && 
-              statusRef.current !== 'disconnected') {
+          if (statusRef.current === 'playing') {
             setStatus('disconnected');
+          } else if (statusRef.current === 'waiting') {
+            setStatus('error');
+            setErrorMsg("Could not connect to game. The room might be full or your session expired.");
           }
         }
       };

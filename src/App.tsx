@@ -7,6 +7,7 @@ import ChessGame from './components/ChessGame';
 import OnlineLobby from './pages/OnlineLobby';
 import OnlineGame from './pages/OnlineGame';
 import HistoryPage from './pages/HistoryPage';
+import PremiumPage from './pages/PremiumPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token, isLoading } = useAuth();
@@ -62,6 +63,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HistoryPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/premium" 
+        element={
+          <ProtectedRoute>
+            <PremiumPage />
           </ProtectedRoute>
         } 
       />

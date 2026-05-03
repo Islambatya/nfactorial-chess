@@ -41,6 +41,23 @@ export default function ChessGame() {
   const navigate = useNavigate();
   const { token } = useAuth();
 
+  const pieceTheme = localStorage.getItem('pieceTheme') || 'classic';
+  const PIECES = ['wP','wN','wB','wR','wQ','wK','bP','bN','bB','bR','bQ','bK'] as const;
+  const customPieces = pieceTheme !== 'classic'
+    ? Object.fromEntries(
+        PIECES.map((p) => [
+          p,
+          ({ squareWidth }: { squareWidth: number }) => (
+            <img
+              src={`https://www.chess.com/chess-themes/pieces/${pieceTheme}/150/${p}.png`}
+              style={{ width: squareWidth, height: squareWidth }}
+              alt={p}
+            />
+          ),
+        ])
+      )
+    : undefined;
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -205,6 +222,7 @@ export default function ChessGame() {
               darkSquareStyle: { backgroundColor: '#b58863' },
               lightSquareStyle: { backgroundColor: '#f0d9b5' },
               animationDurationInMs: 200,
+              ...(customPieces ? { customPieces } : {}),
             }}
           />
           

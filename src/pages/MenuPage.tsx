@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Users, Globe, LogOut, Clock } from 'lucide-react';
+import { Users, Globe, LogOut, Clock, Crown } from 'lucide-react';
 
 export default function MenuPage() {
   const { user, logout } = useAuth();
@@ -82,6 +82,25 @@ export default function MenuPage() {
               className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-all shadow-lg text-center text-lg border border-zinc-700"
             >
               View History
+            </button>
+          </div>
+        </div>
+
+        {/* Premium Card */}
+        <div className="mt-8">
+          <div className="group relative bg-gradient-to-r from-[#312e2b] to-zinc-800 border-2 border-[#81b64c]/30 rounded-3xl p-6 transition-all hover:border-[#81b64c] shadow-xl text-left flex items-center gap-6">
+            <div className="w-16 h-16 bg-[#81b64c]/10 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform border border-[#81b64c]/20">
+              <Crown className="text-[#81b64c] w-8 h-8" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white">Premium Themes 👑</h2>
+              <p className="text-zinc-500 text-sm">Customize your piece styles — Neo, Alpha, California & more.</p>
+            </div>
+            <button
+              onClick={() => navigate('/premium')}
+              className="px-6 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg text-sm whitespace-nowrap"
+            >
+              Customize
             </button>
           </div>
         </div>

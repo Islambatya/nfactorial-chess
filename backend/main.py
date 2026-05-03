@@ -70,6 +70,16 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS game_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            white_player TEXT NOT NULL,
+            black_player TEXT NOT NULL,
+            pgn TEXT,
+            result TEXT,
+            played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -140,6 +150,12 @@ class Token(BaseModel):
 class GameData(BaseModel):
     pgn: str
     color: str = 'white'
+
+class SaveGameData(BaseModel):
+    white_player: str
+    black_player: str
+    pgn: str
+    result: str
 
 class RoomResponse(BaseModel):
     room_id: str
@@ -379,6 +395,36 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
         if not room["connections"]:
             if room_id in rooms:
                 del rooms[room_id]
+
+@app.post("/history")
+async def save_game(data: SaveGameData, email: str = Depends(get_current_user_email)):
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO game_history (white_player, black_player, pgn, result) VALUES (?, ?, ?, ?)",
+            (data.white_player, data.black_player, data.pgn, data.result)
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/history")
+async def get_history(email: str = Depends(get_current_user_email)):
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            """SELECT id, white_player, black_player, pgn, result, played_at
+               FROM game_history
+               WHERE white_player = ? OR black_player = ?
+               ORDER BY played_at DESC""",
+            (email, email)
+        ).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze-game")
 async def analyze_game(data: GameData):

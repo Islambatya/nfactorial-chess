@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Sparkles, BrainCircuit, X, Trash2 } from 'lucide-react';
 import { getApiUrl } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface GameRecord {
   id: number;
-  date: string;
-  timeControl: string;
-  result: string;
-  reason: string;
-  moves: string[];
+  white_player: string;
+  black_player: string;
   pgn: string;
+  result: string;
+  played_at: string;
 }
 
 export default function HistoryPage() {
@@ -18,14 +18,23 @@ export default function HistoryPage() {
   const [selectedGame, setSelectedGame] = useState<GameRecord | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { token } = useAuth();
 
   useEffect(() => {
-    const saved = localStorage.getItem('gameHistory');
-    if (saved) {
-      setHistory(JSON.parse(saved));
-    }
-  }, []);
+    if (!token) return;
+    setIsLoading(true);
+    fetch(`${getApiUrl()}/history`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setHistory(data);
+      })
+      .catch(err => console.error('[History] Failed to load:', err))
+      .finally(() => setIsLoading(false));
+  }, [token]);
 
   const handleAnalyze = async (game: GameRecord) => {
     setSelectedGame(game);
@@ -49,7 +58,6 @@ export default function HistoryPage() {
 
   const clearHistory = () => {
     if (window.confirm("Are you sure you want to clear all game history?")) {
-      localStorage.removeItem('gameHistory');
       setHistory([]);
     }
   };
@@ -81,7 +89,12 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {history.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-[#312e2b] rounded-2xl p-12 text-center border border-zinc-800 shadow-xl">
+            <BrainCircuit className="w-10 h-10 text-zinc-700 mx-auto animate-pulse" />
+            <p className="text-zinc-500 mt-4">Loading history...</p>
+          </div>
+        ) : history.length === 0 ? (
           <div className="bg-[#312e2b] rounded-2xl p-12 text-center space-y-4 border border-zinc-800 shadow-xl">
             <div className="w-20 h-20 bg-[#262421] rounded-full flex items-center justify-center mx-auto mb-6">
               <Clock className="w-10 h-10 text-zinc-700" />
@@ -101,19 +114,17 @@ export default function HistoryPage() {
               <div key={game.id} className="bg-[#312e2b] rounded-xl p-6 border border-zinc-800 hover:border-zinc-700 transition-all shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-6 group">
                 <div className="flex items-center gap-6">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl ${
-                    game.result.includes('White') ? 'bg-white text-black' : 'bg-zinc-950 text-white border border-zinc-800'
+                    game.result.includes('White') ? 'bg-white text-black' : game.result === 'Draw' ? 'bg-zinc-600 text-white' : 'bg-zinc-950 text-white border border-zinc-800'
                   }`}>
-                    {game.result.includes('White') ? 'W' : 'B'}
+                    {game.result.includes('White') ? 'W' : game.result === 'Draw' ? '½' : 'B'}
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-lg">{game.result}</span>
-                      <span className="px-2 py-0.5 bg-zinc-800 text-zinc-400 text-[10px] font-black uppercase rounded tracking-widest">{game.timeControl}</span>
+                      <span className="text-zinc-500 text-xs">{game.white_player} vs {game.black_player}</span>
                     </div>
                     <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                      <span>{game.reason}</span>
-                      <span>•</span>
-                      <span>{new Date(game.date).toLocaleDateString()} {new Date(game.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(game.played_at).toLocaleDateString()} {new Date(game.played_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
@@ -166,16 +177,12 @@ export default function HistoryPage() {
                     <div className="italic text-zinc-300 text-lg leading-relaxed">
                       {analysis}
                     </div>
-                    {selectedGame && (
+                    {selectedGame && selectedGame.pgn && (
                       <div className="pt-4 border-t border-zinc-800">
-                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">Move Sequence</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedGame.moves.map((move, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-zinc-800 rounded text-[11px] font-mono text-zinc-300">
-                              {idx % 2 === 0 ? `${Math.floor(idx/2) + 1}.` : ''} {move}
-                            </span>
-                          ))}
-                        </div>
+                        <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">PGN</p>
+                        <pre className="text-[11px] font-mono text-zinc-400 whitespace-pre-wrap break-words bg-zinc-900 rounded p-3 max-h-32 overflow-y-auto">
+                          {selectedGame.pgn}
+                        </pre>
                       </div>
                     )}
                   </div>

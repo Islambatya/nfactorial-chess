@@ -4,6 +4,7 @@ import { Chessboard } from 'react-chessboard';
 import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 const categories = [
   { name: 'Bullet', icon: '🚀', options: [1, 2] },
@@ -31,6 +32,7 @@ export default function ChessGame() {
   
   const timerRef = useRef<any>(null);
   const navigate = useNavigate();
+  const { token, user } = useAuth();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -58,6 +60,27 @@ export default function ChessGame() {
     }
   }, []);
 
+  const saveGame = useCallback(async (gameInstance: Chess, gameWinner: string) => {
+    if (!token) return;
+    try {
+      const whitePlayer = user?.username || 'White';
+      const blackPlayer = 'Black';
+      await fetch(`${getApiUrl()}/history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          white_player: whitePlayer,
+          black_player: blackPlayer,
+          pgn: gameInstance.pgn(),
+          result: gameWinner,
+        }),
+      });
+      console.log('[History] Game saved to history');
+    } catch (e) {
+      console.error('[History] Failed to save game:', e);
+    }
+  }, [token, user]);
+
   const finishGame = useCallback((_gameInstance: Chess, gameWinner: string, gameReason: string) => {
     if (isGameOver) return;
     setIsGameOver(true);
@@ -67,9 +90,9 @@ export default function ChessGame() {
     
     if (!isGameSaved) {
       setIsGameSaved(true);
-      // No automatic analysis anymore, let the users click the buttons
+      saveGame(_gameInstance, gameWinner);
     }
-  }, [isGameOver, isGameSaved, handleAnalysis]);
+  }, [isGameOver, isGameSaved, handleAnalysis, saveGame]);
 
   useEffect(() => {
     if (selectedTime && !isGameOver) {

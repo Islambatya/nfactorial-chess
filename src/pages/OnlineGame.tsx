@@ -123,6 +123,34 @@ export default function OnlineGame() {
     };
   }, [roomId, token]);
 
+  const onDrop = (sourceSquare: string, targetSquare: string) => {
+    if (status !== 'playing' || turn !== playerColor) return false;
+
+    try {
+      const gameCopy = new Chess(fen);
+      const moveResult = gameCopy.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q'
+      });
+      
+      if (!moveResult) return false;
+
+      if (socketRef.current?.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'move',
+          from: sourceSquare,
+          to: targetSquare,
+          promotion: 'q'
+        }));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+
   const copyCode = () => {
     if (roomId) {
       navigator.clipboard.writeText(roomId);
@@ -214,17 +242,7 @@ export default function OnlineGame() {
                 <AnyChessboard 
                   position={fen}
                   arePiecesDraggable={true}
-                  onPieceDrop={(sourceSquare: string, targetSquare: string) => {
-                    const ws = socketRef.current
-                    if (!ws || ws.readyState !== 1) return false
-                    ws.send(JSON.stringify({ 
-                      type: 'move', 
-                      from: sourceSquare, 
-                      to: targetSquare, 
-                      promotion: 'q' 
-                    }))
-                    return true
-                  }}
+                  onPieceDrop={onDrop}
                   boardOrientation={playerColor || "white"}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}
                   customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}

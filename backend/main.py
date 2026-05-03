@@ -29,7 +29,7 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://nfactorial-chess-chi.vercel.app", "http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -147,7 +147,7 @@ load_rooms()
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    username: str = ""
+    username: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -216,13 +216,14 @@ async def register(user: UserCreate):
     if get_user(user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = pwd_context.hash(user.password)
+    username = (user.username or "").strip() or user.email.split("@", 1)[0]
     conn = get_db()
     conn.execute("INSERT INTO users (email, hashed_password, username) VALUES (?, ?, ?)", 
-                 (user.email, hashed_password, user.username))
+                 (user.email, hashed_password, username))
     conn.commit()
     conn.close()
     access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email, "username": user.username}}
+    return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email, "username": username}}
 
 @app.post("/login", response_model=Token)
 async def login(user: UserLogin):

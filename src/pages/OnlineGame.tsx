@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Chessboard } from 'react-chessboard';
+import { Chess } from 'chess.js';
 import { Sparkles, ArrowLeft, Loader2, Copy, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getWsUrl } from '../lib/api';
 
 export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
+  const [game, setGame] = useState(() => new Chess());
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   const [turn, setTurn] = useState<'white' | 'black'>('white');
   const [opponent, setOpponent] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export default function OnlineGame() {
       if (data.type === 'state') {
         setFen(data.fen);
         setTurn(data.turn);
+        setGame(new Chess(data.fen));
         if (data.color) {
           playerColorRef.current = data.color;
           setPlayerColorState(data.color);
@@ -104,6 +107,13 @@ export default function OnlineGame() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return false;
     if (statusRef.current !== 'playing') return false;
+
+    const gameCopy = new Chess(game.fen());
+    const move = gameCopy.move({ from: source, to: target, promotion: 'q' });
+    if (!move) return false;
+
+    setGame(gameCopy);
+    setFen(gameCopy.fen());
     ws.send(JSON.stringify({ type: 'move', from: source, to: target, promotion: 'q' }));
     return true;
   };

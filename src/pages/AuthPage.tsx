@@ -30,7 +30,7 @@ export default function AuthPage() {
       const endpoint = isLogin ? '/login' : '/register';
       const bodyPayload = isLogin 
         ? { email, password } 
-        : { email, username, password };
+        : { email, username: username.trim() || undefined, password };
 
       const response = await fetch(`${getApiUrl()}${endpoint}`, {
         method: 'POST',
@@ -38,7 +38,7 @@ export default function AuthPage() {
         body: JSON.stringify(bodyPayload),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.detail || 'Auth failed');
 
       login(data.access_token, data.user);
@@ -103,7 +103,6 @@ export default function AuthPage() {
               <div>
                 <input
                   type="text"
-                  required
                   className="w-full bg-[#2c2c2c] border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#81b64c] transition-all placeholder:text-zinc-600"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}

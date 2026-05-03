@@ -102,7 +102,7 @@ export default function ChessGame() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-950 p-4 relative overflow-y-auto pt-16 sm:pt-20">
+    <div className="flex flex-col items-center justify-start min-h-screen bg-[#262421] p-4 relative overflow-y-auto pt-16 sm:pt-20">
       {/* Header Info */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
         <button 
@@ -164,10 +164,11 @@ export default function ChessGame() {
                 position: fen, 
                 onPieceDrop: onDrop,
                 boardOrientation: "white",
-                darkSquareStyle: { backgroundColor: '#3f3f46' },
-                lightSquareStyle: { backgroundColor: '#a1a1aa' },
+                darkSquareStyle: { backgroundColor: '#b58863' },
+                lightSquareStyle: { backgroundColor: '#f0d9b5' },
                 animationDurationInMs: 200,
               }}
+              arePiecesDraggable={true}
             />
           </div>
         </div>

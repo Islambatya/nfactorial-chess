@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2, Crown } from 'lucide-react';
+import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2, Crown, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -76,14 +76,40 @@ export default function QuizGame() {
 
   const [pieceTheme, setPieceTheme] = useState(localStorage.getItem('pieceTheme') || 'classic');
   const [isPro, setIsPro] = useState(() => localStorage.getItem('isPro') === 'true');
+  const [gamesPlayedToday, setGamesPlayedToday] = useState(0);
+  const [timeToMidnight, setTimeToMidnight] = useState('');
 
   useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const savedDate = localStorage.getItem('quizGamesDate');
+    if (savedDate !== today) {
+      localStorage.setItem('quizGamesDate', today);
+      localStorage.setItem('quizGamesCount', '0');
+      setGamesPlayedToday(0);
+    } else {
+      setGamesPlayedToday(parseInt(localStorage.getItem('quizGamesCount') || '0', 10));
+    }
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+      const m = Math.floor((diff / 1000 / 60) % 60).toString().padStart(2, '0');
+      const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
+      setTimeToMidnight(`${h}:${m}:${s}`);
+    }, 1000);
+
     const handleStorage = () => {
       setPieceTheme(localStorage.getItem('pieceTheme') || 'classic');
       setIsPro(localStorage.getItem('isPro') === 'true');
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, []);
   const PIECES = ['wP','wN','wB','wR','wQ','wK','bP','bN','bB','bR','bQ','bK'] as const;
   const customPieces = pieceTheme !== 'classic'
@@ -277,6 +303,13 @@ export default function QuizGame() {
 
   const startWithTime = () => {
     if (!tempSelectedTime) return;
+    
+    if (!isPro) {
+      const newCount = gamesPlayedToday + 1;
+      localStorage.setItem('quizGamesCount', newCount.toString());
+      setGamesPlayedToday(newCount);
+    }
+
     setSelectedTime(tempSelectedTime);
     setWhiteTime(tempSelectedTime * 60);
     setBlackTime(tempSelectedTime * 60);
@@ -389,7 +422,43 @@ export default function QuizGame() {
 
       {/* Right Sidebar */}
       <div className="w-full lg:w-[400px] bg-[#312e2b] flex flex-col border-l border-zinc-800 shadow-2xl">
-        {!namesEntered ? (
+        {!isPro && gamesPlayedToday >= 3 ? (
+          /* Daily Limit Reached Screen */
+          <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
+            <div className="p-8 border-b border-zinc-800">
+              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <Lock className="w-5 h-5 text-red-400" /> Limit Reached
+              </h2>
+            </div>
+            <div className="p-8 flex-1 flex flex-col items-center justify-center text-center space-y-6">
+              <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20">
+                <Lock className="w-10 h-10 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">You've used all 3 free games today</h3>
+                <p className="text-zinc-400 text-sm">Come back tomorrow or upgrade to Pro for unlimited Quiz Chess</p>
+              </div>
+              <div className="bg-zinc-800/50 rounded-xl p-4 w-full border border-zinc-700 text-center">
+                <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-1">Resets In</p>
+                <div className="text-2xl font-mono text-white font-bold">{timeToMidnight}</div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-zinc-800 space-y-3">
+              <button
+                onClick={() => navigate('/premium')}
+                className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold text-base rounded-md transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                Go Pro <Crown className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="w-full py-4 bg-[#2c2c2c] hover:bg-zinc-700 text-white font-bold text-base rounded-md transition-all border border-[#4a4a4a]"
+              >
+                Back to Menu
+              </button>
+            </div>
+          </div>
+        ) : !namesEntered ? (
           /* Step 1: Player Name Entry */
           <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
             <div className="p-8 border-b border-zinc-800">
@@ -418,6 +487,17 @@ export default function QuizGame() {
                   placeholder="Black"
                   className="w-full px-4 py-3 bg-[#2c2c2c] border border-[#4a4a4a] focus:border-[#81b64c] text-white rounded-md outline-none transition-all font-semibold placeholder:text-zinc-600"
                 />
+              </div>
+              <div className="pt-4 text-center">
+                {isPro ? (
+                  <p className="text-[#81b64c] text-sm font-bold flex items-center justify-center gap-1">
+                    ✓ Unlimited games (Pro)
+                  </p>
+                ) : (
+                  <p className="text-zinc-400 text-sm font-medium">
+                    🎮 {3 - gamesPlayedToday} free games remaining today
+                  </p>
+                )}
               </div>
             </div>
             <div className="p-6 border-t border-zinc-800">

@@ -105,6 +105,9 @@ export default function PremiumPage() {
               <li className="flex items-center gap-3 text-zinc-300">
                 <Check className="w-5 h-5 text-[#81b64c]" /> Game History
               </li>
+              <li className="flex items-center gap-3 text-zinc-300">
+                <Check className="w-5 h-5 text-[#81b64c]" /> 3 Daily Quiz Games
+              </li>
               <li className="flex items-center gap-3 text-zinc-600">
                 <X className="w-5 h-5" /> Custom Piece Themes
               </li>
@@ -136,6 +139,9 @@ export default function PremiumPage() {
               </li>
               <li className="flex items-center gap-3 text-white font-bold">
                 <Check className="w-5 h-5 text-[#81b64c]" /> Brutal AI Coach Analysis
+              </li>
+              <li className="flex items-center gap-3 text-white font-bold">
+                <Check className="w-5 h-5 text-[#81b64c]" /> Unlimited Quiz Chess
               </li>
             </ul>
             

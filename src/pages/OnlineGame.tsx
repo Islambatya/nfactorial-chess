@@ -21,6 +21,21 @@ export default function OnlineGame() {
   const playerColorRef = useRef<'white' | 'black'>('white');
   const statusRef = useRef<string>('waiting');
   const [playerColorState, setPlayerColorState] = useState<'white' | 'black'>('white');
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+
+  const onSquareClick = (square: string) => {
+    console.log('[CLICK] square:', square, 'selected:', selectedSquare, 'status:', statusRef.current);
+    if (statusRef.current !== 'playing') return;
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    if (selectedSquare) {
+      ws.send(JSON.stringify({ type: 'move', from: selectedSquare, to: square, promotion: 'q' }));
+      setSelectedSquare(null);
+    } else {
+      setSelectedSquare(square);
+    }
+  };
 
   const connect = useCallback(() => {
     if (!roomId || !token) return;
@@ -151,9 +166,11 @@ export default function OnlineGame() {
                   position={fen}
                   arePiecesDraggable={true}
                   onPieceDrop={onDrop}
+                  onSquareClick={onSquareClick}
                   boardOrientation={playerColorState === 'black' ? 'black' : 'white'}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}
                   customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
+                  customSquareStyles={selectedSquare ? { [selectedSquare]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' } } : {}}
                   animationDuration={200}
                 />
               );

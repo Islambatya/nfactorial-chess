@@ -143,15 +143,20 @@ export default function ChessGame() {
   };
 
   const handleNewGame = () => {
-    setGame(new Chess());
-    setFen('start');
+    if (timerRef.current) clearInterval(timerRef.current);
+    const newGame = new Chess();
+    setGame(newGame);
+    setFen(newGame.fen());
     setIsGameOver(false);
-    setWinner(null);
     setReason(null);
+    setWinner(null);
     setIsGameSaved(false);
+    setWhiteTime(0);
+    setBlackTime(0);
     setSelectedTime(null);
     setTempSelectedTime(null);
-    if (timerRef.current) clearInterval(timerRef.current);
+    setCoachTip(null);
+    setShowCoachModal(false);
   };
 
   return (
@@ -308,7 +313,7 @@ export default function ChessGame() {
                 <Sparkles className="w-8 h-8 text-[#81b64c]" />
               </div>
               <h2 className="text-2xl font-bold text-zinc-50">Coach Analysis</h2>
-              <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 italic text-zinc-300 text-lg leading-relaxed">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 italic text-zinc-300 text-lg leading-relaxed shadow-inner">
                 {coachTip}
               </div>
               <button onClick={() => setShowCoachModal(false)} className="mt-6 px-8 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg">Continue</button>

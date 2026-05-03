@@ -126,7 +126,10 @@ export default function OnlineGame() {
   }, [roomId, token]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    if (status !== 'playing' || turn !== playerColor) return false;
+    console.log(`[OnlineGame] onDrop attempt: ${sourceSquare}->${targetSquare}, status: ${status}, turn: ${turn}, playerColor: ${playerColor}`);
+    
+    if (status !== 'playing') return false;
+    if (turn !== playerColor) return false;
 
     try {
       const gameCopy = new Chess(fen);
@@ -243,7 +246,11 @@ export default function OnlineGame() {
               return (
                 <AnyChessboard 
                   position={fen}
-                  arePiecesDraggable={status === 'playing' && turn === playerColor}
+                  arePiecesDraggable={true}
+                  isDraggablePiece={({ piece }: any) => {
+                    const isWhitePiece = piece.startsWith('w');
+                    return playerColor === 'white' ? isWhitePiece : !isWhitePiece;
+                  }}
                   onPieceDrop={onDrop}
                   boardOrientation={playerColor || "white"}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}

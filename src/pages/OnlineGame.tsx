@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { Sparkles, ArrowLeft, Loader2, Copy, Check, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, ArrowLeft, Loader2, Copy, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function OnlineGame() {
@@ -28,20 +28,13 @@ export default function OnlineGame() {
   }, [status]);
 
   const connectWebSocket = useCallback(() => {
-    // Debug logs
-    console.log('[DEBUG] token:', token || localStorage.getItem('token'));
-    console.log('[DEBUG] roomId:', roomId);
-
     if (!roomId || !token) {
-      console.error("[OnlineGame] Missing roomId or token", { roomId, token });
       setStatus('error');
       setErrorMsg("Authentication session missing. Please login again.");
       return;
     }
 
-    // Close existing connection if any
     if (socketRef.current) {
-      console.log("[OnlineGame] Closing existing socket...");
       socketRef.current.onopen = null;
       socketRef.current.onmessage = null;
       socketRef.current.onerror = null;
@@ -51,21 +44,18 @@ export default function OnlineGame() {
 
     try {
       const wsUrl = `ws://localhost:8000/ws/game/${roomId}?token=${token}`;
-      console.log(`[OnlineGame] Connecting to WebSocket: ${wsUrl.split('?')[0]}?[TOKEN]`);
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
       ws.onopen = () => {
         if (socketRef.current !== ws) return;
-        console.log("[OnlineGame] WebSocket Connected Successfully");
+        console.log("[OnlineGame] WebSocket Connected");
       };
 
       ws.onmessage = (event) => {
         if (socketRef.current !== ws) return;
         try {
           const data = JSON.parse(event.data);
-          console.log("[OnlineGame] Received WebSocket message:", data.type, data);
-          
           switch (data.type) {
             case 'state':
               setFen(data.fen);
@@ -78,21 +68,17 @@ export default function OnlineGame() {
               }
               break;
             case 'opponent_joined':
-              console.log("[OnlineGame] Opponent joined:", data.username);
               setOpponent(data.username);
               setStatus('playing');
               break;
             case 'opponent_disconnected':
-              console.log("[OnlineGame] Opponent disconnected");
               setStatus('disconnected');
               break;
             case 'game_over':
-              console.log("[OnlineGame] Game over:", data.result);
               setStatus('game_over');
               setResult(data.result);
               break;
             case 'error':
-              console.error("[OnlineGame] Server error:", data.message);
               setStatus('error');
               setErrorMsg(data.message);
               break;
@@ -102,16 +88,13 @@ export default function OnlineGame() {
         }
       };
 
-      ws.onerror = (event) => {
+      ws.onerror = () => {
         if (socketRef.current !== ws) return;
-        console.error("[OnlineGame] WebSocket Error:", event);
         setStatus('error');
         setErrorMsg("Connection failed. Check if the backend is running.");
       };
 
-      ws.onclose = (event) => {
-        console.log("[OnlineGame] WebSocket Closed:", event.code, event.reason);
-        // Only set disconnected if THIS is the current active socket
+      ws.onclose = () => {
         if (socketRef.current === ws) {
           if (statusRef.current !== 'game_over' && 
               statusRef.current !== 'error' && 
@@ -121,7 +104,6 @@ export default function OnlineGame() {
         }
       };
     } catch (err: any) {
-      console.error("[OnlineGame] WebSocket Exception:", err);
       setStatus('error');
       setErrorMsg(err.message || "Failed to initialize connection.");
     }
@@ -131,7 +113,6 @@ export default function OnlineGame() {
     connectWebSocket();
     return () => {
       if (socketRef.current) {
-        console.log("[OnlineGame] Cleaning up WebSocket handlers and closing...");
         socketRef.current.onopen = null;
         socketRef.current.onmessage = null;
         socketRef.current.onerror = null;
@@ -143,30 +124,16 @@ export default function OnlineGame() {
   }, [roomId, token]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    console.log(`[OnlineGame] onDrop called: from ${sourceSquare} to ${targetSquare}`);
-    
-    if (status !== 'playing') {
-      console.log("[OnlineGame] Move blocked: status is", status);
-      return false;
-    }
-    
-    if (turn !== playerColor) {
-      console.log(`[OnlineGame] Not your turn. Turn: ${turn}, Color: ${playerColor}`);
-      return false;
-    }
+    if (status !== 'playing' || turn !== playerColor) return false;
 
     try {
       const move = { from: sourceSquare, to: targetSquare, promotion: 'q' };
       const gameCopy = new Chess(game.fen());
       const moveResult = gameCopy.move(move);
       
-      if (!moveResult) {
-        console.log("[OnlineGame] Illegal move attempted locally");
-        return false;
-      }
+      if (!moveResult) return false;
 
       if (socketRef.current?.readyState === WebSocket.OPEN) {
-        console.log("[OnlineGame] Sending move to server:", move);
         socketRef.current.send(JSON.stringify({
           type: 'move',
           from: sourceSquare,
@@ -177,7 +144,6 @@ export default function OnlineGame() {
       }
       return false;
     } catch (e) {
-      console.error("[OnlineGame] onDrop error:", e);
       return false;
     }
   };
@@ -191,6 +157,35 @@ export default function OnlineGame() {
   };
 
   if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-chess-bg flex items-center justify-center p-4">
+        <div className="bg-chess-card border border-red-500/20 rounded-3xl p-10 max-w-md w-full text-center space-y-6 shadow-2xl">
+          <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Connection Error</h2>
+          <p className="text-chess-secondary">{errorMsg || "Connection to game server failed."}</p>
+          <div className="grid gap-3 pt-4">
+            <button 
+              onClick={() => { setStatus('waiting'); connectWebSocket(); }}
+              className="w-full py-4 bg-chess-green hover:brightness-110 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              TRY AGAIN
+            </button>
+            <button 
+              onClick={() => navigate('/online')}
+              className="w-full py-4 bg-zinc-700 text-white font-bold rounded-2xl transition-all"
+            >
+              BACK TO LOBBY
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-chess-bg p-4 relative overflow-y-auto pt-16 sm:pt-20">
       <div className="absolute top-4 left-4 z-10">
         <button 
@@ -238,15 +233,20 @@ export default function OnlineGame() {
               </div>
             )}
 
-            <Chessboard 
-              position={fen}
-              onPieceDrop={onDrop}
-              boardOrientation={playerColor || "white"}
-              customDarkSquareStyle={{ backgroundColor: '#b58863' }}
-              customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
-              animationDuration={200}
-              arePiecesDraggable={playerColor === turn && status === 'playing'}
-            />
+            {(() => {
+              const AnyChessboard = Chessboard as any;
+              return (
+                <AnyChessboard 
+                  position={fen}
+                  onPieceDrop={onDrop}
+                  boardOrientation={playerColor || "white"}
+                  customDarkSquareStyle={{ backgroundColor: '#b58863' }}
+                  customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
+                  animationDuration={200}
+                  arePiecesDraggable={playerColor === turn && status === 'playing'}
+                />
+              );
+            })()}
           </div>
 
           {/* Your Info */}

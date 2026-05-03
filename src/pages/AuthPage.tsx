@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, UserPlus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -86,7 +86,7 @@ export default function AuthPage() {
               <input
                 type="email"
                 required
-                className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
+                className="w-full bg-[#2c2c2c] border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#81b64c] transition-all placeholder:text-zinc-600"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
@@ -97,7 +97,7 @@ export default function AuthPage() {
               <input
                 type="password"
                 required
-                className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
+                className="w-full bg-[#2c2c2c] border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#81b64c] transition-all placeholder:text-zinc-600"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
@@ -109,7 +109,7 @@ export default function AuthPage() {
                 <input
                   type="password"
                   required
-                  className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
+                  className="w-full bg-[#2c2c2c] border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#81b64c] transition-all placeholder:text-zinc-600"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm Password"

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Globe, Plus, LogIn, Loader2, Copy, Check, ArrowLeft } from 'lucide-react';
+import { Plus, LogIn, Loader2, Copy, Check, ArrowLeft } from 'lucide-react';
 
 export default function OnlineLobby() {
   const [roomIdInput, setRoomIdInput] = useState('');

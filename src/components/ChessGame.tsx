@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { Sparkles, BrainCircuit, X, ArrowLeft, Flag } from 'lucide-react';
+import { Sparkles, BrainCircuit, X, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const categories = [
@@ -144,17 +144,10 @@ export default function ChessGame() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-[#262421] text-white">
-      {/* Sidebar Overlay (Mobile) */}
-      <div className="lg:hidden absolute top-4 left-4 z-50">
-        <button onClick={() => navigate('/')} className="p-2 bg-[#312e2b] rounded-lg">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-      </div>
-
+    <div className="flex flex-col lg:flex-row h-screen bg-[#262421] text-white overflow-hidden">
       {/* Main Board Area */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-        <div className="w-full max-w-[800px] aspect-square relative shadow-2xl">
+      <div className="flex-1 h-full flex items-center justify-center p-4">
+        <div className="w-full max-w-[calc(100vh-40px)] aspect-square relative shadow-2xl">
           <Chessboard 
             options={{
               position: fen, 
@@ -183,21 +176,27 @@ export default function ChessGame() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-full lg:w-[400px] bg-[#312e2b] flex flex-col border-l border-zinc-800 shadow-2xl overflow-y-auto">
+      <div className="w-full lg:w-[400px] bg-[#312e2b] flex flex-col border-l border-zinc-800 shadow-2xl">
         {!selectedTime ? (
           /* Selection View */
-          <div className="flex flex-col h-full p-6 space-y-8 animate-in slide-in-from-right duration-300">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold tracking-tight">Локальная игра</h1>
-              <button onClick={() => navigate('/')} className="p-2 hover:bg-zinc-700 rounded-lg transition-colors">
-                <ArrowLeft className="w-5 h-5 text-zinc-400" />
-              </button>
+          <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-around py-8 border-b border-zinc-800 bg-[#2c2c2c]/30">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♟</div>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Игрок 1</span>
+              </div>
+              <div className="text-zinc-800 font-black text-xl italic tracking-tighter opacity-50">VS</div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♙</div>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Игрок 2</span>
+              </div>
             </div>
 
-            <div className="space-y-6 flex-1">
+            <div className="p-6 space-y-8 flex-1 overflow-y-auto">
               {categories.map((cat) => (
-                <div key={cat.name} className="space-y-3">
-                  <div className="flex items-center gap-2 text-zinc-400 font-bold uppercase text-xs tracking-[0.2em]">
+                <div key={cat.name} className="space-y-4">
+                  <div className="flex items-center gap-2 text-zinc-500 font-black uppercase text-[11px] tracking-[0.2em]">
                     <span>{cat.icon}</span>
                     <span>{cat.name}</span>
                   </div>
@@ -206,10 +205,10 @@ export default function ChessGame() {
                       <button
                         key={mins}
                         onClick={() => setTempSelectedTime(mins)}
-                        className={`px-4 py-2.5 rounded-full text-sm font-bold transition-all ${
+                        className={`min-w-[80px] px-5 py-2.5 rounded-md text-sm font-semibold transition-all border ${
                           tempSelectedTime === mins 
-                          ? 'bg-[#1a1a1a] border-2 border-[#81b64c] text-[#81b64c]' 
-                          : 'bg-[#1a1a1a] border-2 border-transparent text-zinc-300 hover:border-zinc-700'
+                          ? 'bg-[#81b64c] border-[#81b64c] text-white shadow-lg' 
+                          : 'bg-[#2c2c2c] border-[#4a4a4a] text-white hover:border-[#81b64c]'
                         }`}
                       >
                         {mins} мин
@@ -220,13 +219,23 @@ export default function ChessGame() {
               ))}
             </div>
 
-            <button
-              onClick={startWithTime}
-              disabled={!tempSelectedTime}
-              className="w-full py-5 bg-[#81b64c] hover:brightness-110 disabled:opacity-50 disabled:grayscale text-white font-black text-xl rounded-xl transition-all shadow-lg active:scale-[0.98]"
-            >
-              Начать игру
-            </button>
+            <div className="p-6 border-t border-zinc-800 bg-[#2c2c2c]/20">
+              <button
+                onClick={startWithTime}
+                disabled={!tempSelectedTime}
+                className={`w-full py-4 text-white font-bold text-base rounded-md transition-all shadow-lg active:scale-[0.98] uppercase tracking-wider ${
+                  tempSelectedTime ? 'bg-[#81b64c] hover:brightness-110' : 'bg-[#4a4a4a] cursor-not-allowed opacity-50'
+                }`}
+              >
+                Начать игру
+              </button>
+              <button 
+                onClick={() => navigate('/')}
+                className="w-full mt-4 py-2 text-zinc-600 hover:text-zinc-400 text-[11px] font-black uppercase tracking-[0.2em] transition-colors"
+              >
+                Вернуться в меню
+              </button>
+            </div>
           </div>
         ) : (
           /* Active Game View */
@@ -235,10 +244,10 @@ export default function ChessGame() {
               {/* Black Player */}
               <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'b' ? 'bg-[#262421] border-[#81b64c] shadow-[0_0_30px_rgba(129,182,76,0.1)]' : 'bg-transparent border-transparent opacity-60'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-zinc-950 rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl">Ч</div>
+                  <div className="w-12 h-12 bg-[#2c2c2c] rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl shadow-inner">Ч</div>
                   <div>
-                    <p className="font-bold text-lg">Черные</p>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Противник</p>
+                    <p className="font-bold text-lg">Игрок 2</p>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Черные</p>
                   </div>
                 </div>
                 <div className={`text-5xl font-mono font-bold text-center ${blackTime < 10 && game.turn() === 'b' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
@@ -258,10 +267,10 @@ export default function ChessGame() {
               {/* White Player */}
               <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'w' ? 'bg-[#262421] border-[#81b64c] shadow-[0_0_30px_rgba(129,182,76,0.1)]' : 'bg-transparent border-transparent opacity-60'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-700 text-black font-bold text-xl">Б</div>
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-700 text-black font-bold text-xl shadow-lg">Б</div>
                   <div>
-                    <p className="font-bold text-lg">Белые</p>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Вы</p>
+                    <p className="font-bold text-lg">Игрок 1</p>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Белые</p>
                   </div>
                 </div>
                 <div className={`text-5xl font-mono font-bold text-center ${whiteTime < 10 && game.turn() === 'w' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
@@ -271,14 +280,14 @@ export default function ChessGame() {
 
               {/* Status / Coach */}
               <div className="pt-4 space-y-3">
-                <div className="bg-[#1a1a1a] p-4 rounded-xl border border-zinc-800 flex items-center justify-center gap-3">
+                <div className="bg-[#2c2c2c] p-4 rounded-xl border border-zinc-800 flex items-center justify-center gap-3">
                   <BrainCircuit className={`w-5 h-5 ${isAnalyzing ? 'text-[#81b64c] animate-pulse' : 'text-zinc-600'}`} />
                   <span className={`font-bold uppercase tracking-widest text-xs ${isAnalyzing ? 'text-[#81b64c]' : 'text-zinc-500'}`}>
                     {isAnalyzing ? 'Тренер думает...' : 'Совет тренера готов'}
                   </span>
                 </div>
                 {coachTip && (
-                  <button onClick={() => setShowCoachModal(true)} className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-bold transition-all">
+                  <button onClick={() => setShowCoachModal(true)} className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-bold transition-all border border-zinc-700">
                     Посмотреть совет
                   </button>
                 )}
@@ -288,14 +297,14 @@ export default function ChessGame() {
             <div className="pt-6 space-y-3">
               <button 
                 onClick={resign}
-                className="w-full py-4 bg-zinc-800 hover:bg-red-900/40 text-zinc-400 hover:text-red-400 border border-transparent hover:border-red-900/50 rounded-xl transition-all font-bold flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#2c2c2c] hover:bg-red-900/40 text-zinc-400 hover:text-red-400 border border-[#4a4a4a] hover:border-red-900/50 rounded-md transition-all font-bold flex items-center justify-center gap-2"
               >
                 <Flag className="w-4 h-4" />
                 Сдаться
               </button>
               <button 
                 onClick={resetGame}
-                className="w-full py-3 text-zinc-600 hover:text-zinc-400 text-xs font-bold uppercase tracking-widest transition-colors"
+                className="w-full py-3 text-zinc-600 hover:text-zinc-400 text-[11px] font-black uppercase tracking-widest transition-colors"
               >
                 Новая партия
               </button>
@@ -319,7 +328,7 @@ export default function ChessGame() {
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 italic text-zinc-300 text-lg leading-relaxed shadow-inner">
                 {coachTip}
               </div>
-              <button onClick={() => setShowCoachModal(false)} className="mt-6 px-8 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg">Продолжить</button>
+              <button onClick={() => setShowCoachModal(false)} className="mt-6 px-8 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-full transition-all shadow-lg">Продолжить</button>
             </div>
           </div>
         </div>

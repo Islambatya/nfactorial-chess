@@ -126,53 +126,24 @@ export default function OnlineGame() {
   }, [roomId, token]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    const gameCopy = new Chess(fen);
-    const currentTurn = gameCopy.turn();
-    
-    console.log(`[OnlineGame] Drop attempt: ${sourceSquare}->${targetSquare}`);
-    console.log(`[OnlineGame] Status: ${status}, Game Turn: ${currentTurn}, Player Color: ${playerColor}`);
-    
-    // TEMPORARY BYPASS: Log but don't strictly return false for turn mismatch during testing
+    const ws = socketRef.current
+    console.log("[DROP] piece drop", sourceSquare, "->", targetSquare, "ws state:", ws?.readyState, "status:", status, "playerColor:", playerColor, "turn:", turn)
+    if (!ws || ws.readyState !== 1) {
+      console.log("[DROP] REJECTED: ws not ready")
+      return false
+    }
     if (status !== 'playing') {
-      console.log("[OnlineGame] Move warning: Game not in playing state, but allowing move for test");
+      console.log("[DROP] REJECTED: status is", status)
+      return false
     }
-    
-    if (currentTurn !== playerColor) {
-      console.log("[OnlineGame] Move warning: Not your turn, but allowing move for test");
+    if (turn !== playerColor) {
+      console.log("[DROP] REJECTED: not your turn. turn=", turn, "playerColor=", playerColor)
+      return false
     }
-
-    try {
-      const moveResult = gameCopy.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q'
-      });
-      
-      if (!moveResult) {
-        console.log("[OnlineGame] Move rejected: Illegal move");
-        return false;
-      }
-
-      // Optimistic update to prevent snap-back
-      const newFen = gameCopy.fen();
-      setFen(newFen);
-      setTurn(gameCopy.turn());
-      setGame(new Chess(newFen));
-
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        console.log("[OnlineGame] Sending move to server...");
-        socketRef.current.send(JSON.stringify({
-          type: 'move',
-          from: sourceSquare,
-          to: targetSquare,
-          promotion: 'q'
-        }));
-      }
-      return true; // Bypass: Always return true if move was legal locally
-    } catch (e) {
-      console.error("[OnlineGame] Move exception:", e);
-      return false;
-    }
+    const msg = JSON.stringify({ type: 'move', from: sourceSquare, to: targetSquare, promotion: 'q' })
+    console.log("[DROP] Sending:", msg)
+    ws.send(msg)
+    return false
   };
 
   const copyCode = () => {

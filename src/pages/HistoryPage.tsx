@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Sparkles, BrainCircuit, X, Trash2 } from 'lucide-react';
+import { getApiUrl } from '../lib/api';
 
 interface GameRecord {
   id: number;
@@ -31,7 +32,7 @@ export default function HistoryPage() {
     setIsAnalyzing(true);
     setAnalysis(null);
     try {
-      const response = await fetch('http://localhost:8000/analyze-game', {
+      const response = await fetch(`${getApiUrl()}/analyze-game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pgn: game.pgn }),

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, LogIn, Loader2, Copy, Check, ArrowLeft } from 'lucide-react';
+import { getApiUrl } from '../lib/api';
 
 export default function OnlineLobby() {
   const [roomIdInput, setRoomIdInput] = useState('');
@@ -24,7 +25,7 @@ export default function OnlineLobby() {
       try {
         const cleanRoomId = createdRoomId.split(':')[0].trim()
         
-        const res = await fetch(`http://localhost:8000/rooms/${cleanRoomId}`, {
+        const res = await fetch(`${getApiUrl()}/rooms/${cleanRoomId}`, {
           headers: { 
             'Authorization': `Bearer ${tokenToUse}`,
             'Content-Type': 'application/json'
@@ -54,7 +55,7 @@ export default function OnlineLobby() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/rooms/create', {
+      const response = await fetch(`${getApiUrl()}/rooms/create`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -72,13 +73,13 @@ export default function OnlineLobby() {
 
   const joinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roomIdInput) return;
+    const formattedId = roomIdInput.trim().toUpperCase();
+    if (!formattedId) return;
     
     setLoading(true);
     setError(null);
     try {
-      const formattedId = roomIdInput.toUpperCase();
-      const response = await fetch(`http://localhost:8000/rooms/join/${formattedId}`, {
+      const response = await fetch(`${getApiUrl()}/rooms/join/${formattedId}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

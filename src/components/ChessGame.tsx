@@ -3,6 +3,7 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Sparkles, BrainCircuit, X, Flag, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../lib/api';
 
 const categories = [
   { name: 'Bullet', icon: '🚀', options: [1, 2] },
@@ -40,7 +41,7 @@ export default function ChessGame() {
   const handleAnalysis = useCallback(async (pgn: string) => {
     setIsAnalyzing(true);
     try {
-      const response = await fetch('http://localhost:8000/analyze-game', {
+      const response = await fetch(`${getApiUrl()}/analyze-game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pgn }),

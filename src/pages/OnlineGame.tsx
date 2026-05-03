@@ -4,6 +4,7 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Sparkles, ArrowLeft, Loader2, Copy, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getWsUrl } from '../lib/api';
 
 export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -43,7 +44,7 @@ export default function OnlineGame() {
     }
 
     try {
-      const wsUrl = `ws://localhost:8000/ws/game/${roomId}?token=${token}`;
+      const wsUrl = `${getWsUrl()}/ws/game/${roomId}?token=${token}`;
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
@@ -241,7 +242,7 @@ export default function OnlineGame() {
               return (
                 <AnyChessboard 
                   position={fen}
-                  arePiecesDraggable={true}
+                  arePiecesDraggable={status === 'playing' && turn === playerColor}
                   onPieceDrop={onDrop}
                   boardOrientation={playerColor || "white"}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}

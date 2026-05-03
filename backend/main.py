@@ -229,6 +229,9 @@ async def get_room(room_id: str):
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     token = websocket.query_params.get("token")
     email = await get_ws_user_email(token) if token else None
+    await websocket.accept()
+    print(f"[WS] Connection handshake accepted for {email or 'unknown'} in room {room_id}")
+
     if not email:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
@@ -288,47 +291,53 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             data = await websocket.receive_json()
             print(f"[WS] Received from {email}: {data}")
             if data["type"] == "move":
-                # Validate turn
                 board = room["board"]
                 is_white_turn = board.turn == chess.WHITE
+                print(f"[WS] Move attempt: {data['from']}->{data['to']} by {email} (color={color}, white_turn={is_white_turn})")
+                
                 if (is_white_turn and color != "white") or (not is_white_turn and color != "black"):
-                    print(f"[WS] Illegal turn: {email} tried to move but it is {board.turn} turn")
+                    print(f"[WS] REJECTED: wrong turn")
                     continue
 
                 try:
-                    move = chess.Move.from_uci(data["from"] + data["to"] + (data.get("promotion") or ""))
+                    from_sq = data["from"]
+                    to_sq = data["to"]
+                    piece = board.piece_at(chess.parse_square(from_sq))
+                    is_promotion = (
+                        piece is not None and
+                        piece.piece_type == chess.PAWN and
+                        to_sq[1] in ("1", "8")
+                    )
+                    uci = from_sq + to_sq + (data.get("promotion", "q") if is_promotion else "")
+                    print(f"[WS] UCI: {uci}, legal_moves count: {board.legal_moves.count()}")
+                    move = chess.Move.from_uci(uci)
+                    print(f"[WS] Move legal: {move in board.legal_moves}")
+                    
                     if move in board.legal_moves:
                         board.push(move)
-                        
-                        # Broadcast state update
                         response = {
                             "type": "state",
                             "fen": board.fen(),
                             "turn": "white" if board.turn == chess.WHITE else "black",
-                            "lastMove": {"from": data["from"], "to": data["to"]}
+                            "lastMove": {"from": from_sq, "to": to_sq}
                         }
                         for p_email, conn in room["connections"].items():
                             p_color = "white" if room["players"][0] == p_email else "black"
                             await conn.send_json({**response, "color": p_color})
-                        
                         save_rooms()
                         
-                        # Check for game over
                         if board.is_game_over():
                             result = "draw"
                             if board.is_checkmate():
                                 result = "white_wins" if not is_white_turn else "black_wins"
-                            
-                            game_over_msg = {
-                                "type": "game_over",
-                                "result": result,
-                                "reason": str(board.outcome().termination)
-                            }
+                            game_over_msg = {"type": "game_over", "result": result, "reason": str(board.outcome().termination)}
                             for p_email, conn in room["connections"].items():
                                 p_color = "white" if room["players"][0] == p_email else "black"
                                 await conn.send_json({**game_over_msg, "color": p_color})
+                    else:
+                        print(f"[WS] REJECTED: move {uci} not in legal moves")
                 except Exception as e:
-                    print(f"Move error: {e}")
+                    print(f"[WS] Move error: {e}")
 
     except WebSocketDisconnect:
         print(f"[WS] {email} disconnected from room {room_id}")

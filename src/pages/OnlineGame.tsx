@@ -54,6 +54,7 @@ export default function OnlineGame() {
       };
 
       ws.onmessage = (event) => {
+        console.log("[WS] Message received:", event.data)
         if (socketRef.current !== ws) return;
         try {
           const data = JSON.parse(event.data);
@@ -221,6 +222,7 @@ export default function OnlineGame() {
                   onPieceDrop={(sourceSquare: string, targetSquare: string) => {
                     const ws = socketRef.current
                     if (!ws || ws.readyState !== 1 || status !== 'playing') return false
+                    console.log("[DROP] Sending move, status:", status, "ws state:", ws?.readyState)
                     ws.send(JSON.stringify({ type: 'move', from: sourceSquare, to: targetSquare, promotion: 'q' }))
                     return true
                   }}

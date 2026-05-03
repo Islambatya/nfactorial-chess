@@ -139,6 +139,7 @@ class Token(BaseModel):
 
 class GameData(BaseModel):
     pgn: str
+    color: str = 'white'
 
 class RoomResponse(BaseModel):
     room_id: str
@@ -382,7 +383,18 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
 @app.post("/analyze-game")
 async def analyze_game(data: GameData):
     try:
-        prompt = f"You are a sassy chess coach. Find the biggest mistake in this game and give one sentence of advice. Here is the PGN of the game: {data.pgn}"
+        if data.color == 'white':
+            color_context = "Analyze this game from White's perspective."
+        else:
+            color_context = "Analyze this game from Black's perspective."
+        
+        prompt = f"""You are a brutally honest, savage chess coach. You do NOT sugarcoat anything. 
+        You speak like a disappointed parent mixed with a drill sergeant. 
+        Find the single worst move made by the {data.color} player and roast them for it in 2-3 sentences. 
+        Be specific about the move and why it was terrible. Use human, emotional language. No chess jargon without explanation.
+        Game PGN: {data.pgn}
+        {color_context}"""
+        
         response = gemini_model.generate_content(prompt)
         return {"analysis": response.text}
     except Exception as e:

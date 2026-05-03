@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { Sparkles, BrainCircuit, X, Flag, ArrowLeft } from 'lucide-react';
+import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from '../lib/api';
 
@@ -38,13 +38,13 @@ export default function ChessGame() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleAnalysis = useCallback(async (pgn: string) => {
+  const handleAnalysis = useCallback(async (pgn: string, color: 'white' | 'black' = 'white') => {
     setIsAnalyzing(true);
     try {
       const response = await fetch(`${getApiUrl()}/analyze-game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pgn }),
+        body: JSON.stringify({ pgn, color }),
       });
       const data = await response.json();
       setCoachTip(data.analysis || data.detail);
@@ -58,7 +58,7 @@ export default function ChessGame() {
     }
   }, []);
 
-  const finishGame = useCallback((gameInstance: Chess, gameWinner: string, gameReason: string) => {
+  const finishGame = useCallback((_gameInstance: Chess, gameWinner: string, gameReason: string) => {
     if (isGameOver) return;
     setIsGameOver(true);
     setWinner(gameWinner);
@@ -67,7 +67,7 @@ export default function ChessGame() {
     
     if (!isGameSaved) {
       setIsGameSaved(true);
-      handleAnalysis(gameInstance.pgn());
+      // No automatic analysis anymore, let the users click the buttons
     }
   }, [isGameOver, isGameSaved, handleAnalysis]);
 
@@ -185,14 +185,30 @@ export default function ChessGame() {
                   <p className="text-zinc-500 font-bold text-xl uppercase tracking-widest">{reason}</p>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={() => handleAnalysis(game.pgn())} 
-                    disabled={isAnalyzing}
-                    className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-lg flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
-                  >
-                    <BrainCircuit className={`w-5 h-5 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
-                    {isAnalyzing ? 'Analyzing...' : '🤖 AI Analysis'}
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => handleAnalysis(game.pgn(), 'white')} 
+                      disabled={isAnalyzing}
+                      className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
+                    >
+                      <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
+                      Destroy White
+                    </button>
+                    <button 
+                      onClick={() => handleAnalysis(game.pgn(), 'black')} 
+                      disabled={isAnalyzing}
+                      className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
+                    >
+                      <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
+                      Destroy Black
+                    </button>
+                  </div>
+                  {isAnalyzing && (
+                    <div className="flex items-center justify-center gap-2 text-[#81b64c] text-xs font-bold animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      COACH IS COOKING...
+                    </div>
+                  )}
                   <button 
                     onClick={handleNewGame} 
                     className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg text-lg"
@@ -308,7 +324,7 @@ export default function ChessGame() {
               <div className="w-16 h-16 bg-[#81b64c]/10 rounded-full flex items-center justify-center border border-[#81b64c]/20">
                 <Sparkles className="w-8 h-8 text-[#81b64c]" />
               </div>
-              <h2 className="text-2xl font-bold text-zinc-50">Coach Analysis</h2>
+              <h2 className="text-2xl font-bold text-zinc-50">Brutal Coach 🔥</h2>
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 italic text-zinc-300 text-lg leading-relaxed">
                 {coachTip}
               </div>

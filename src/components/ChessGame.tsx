@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2 } from 'lucide-react';
+import { Sparkles, BrainCircuit, X, Flag, ArrowLeft, Loader2, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getApiUrl } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -42,10 +42,12 @@ export default function ChessGame() {
   const { token } = useAuth();
 
   const [pieceTheme, setPieceTheme] = useState(localStorage.getItem('pieceTheme') || 'classic');
+  const [isPro, setIsPro] = useState(() => localStorage.getItem('isPro') === 'true');
 
   useEffect(() => {
     const handleStorage = () => {
       setPieceTheme(localStorage.getItem('pieceTheme') || 'classic');
+      setIsPro(localStorage.getItem('isPro') === 'true');
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
@@ -249,22 +251,34 @@ export default function ChessGame() {
                 </div>
                 <div className="flex flex-col gap-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => handleAnalysis(game.pgn(), 'white')} 
-                      disabled={isAnalyzing}
-                      className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
-                    >
-                      <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
-                      Destroy {whiteName}
-                    </button>
-                    <button 
-                      onClick={() => handleAnalysis(game.pgn(), 'black')} 
-                      disabled={isAnalyzing}
-                      className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
-                    >
-                      <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
-                      Destroy {blackName}
-                    </button>
+                    {isPro ? (
+                      <>
+                        <button 
+                          onClick={() => handleAnalysis(game.pgn(), 'white')} 
+                          disabled={isAnalyzing}
+                          className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
+                        >
+                          <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
+                          Destroy {whiteName}
+                        </button>
+                        <button 
+                          onClick={() => handleAnalysis(game.pgn(), 'black')} 
+                          disabled={isAnalyzing}
+                          className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
+                        >
+                          <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
+                          Destroy {blackName}
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => navigate('/premium')}
+                        className="col-span-2 py-4 bg-gradient-to-r from-zinc-800 to-[#312e2b] hover:from-zinc-700 hover:to-zinc-800 text-[#81b64c] font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-[#81b64c]/30"
+                      >
+                        <Crown className="w-5 h-5" />
+                        Unlock Brutal AI Coach (Pro)
+                      </button>
+                    )}
                   </div>
                   {isAnalyzing && (
                     <div className="flex items-center justify-center gap-2 text-[#81b64c] text-xs font-bold animate-pulse">

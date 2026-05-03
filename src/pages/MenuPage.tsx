@@ -8,59 +8,66 @@ export default function MenuPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-chess-bg flex flex-col items-center justify-center p-4 relative">
       {/* Header */}
-      <div className="absolute top-4 right-4 flex items-center gap-4 bg-zinc-900/50 border border-zinc-800 rounded-full px-4 py-2">
-        <span className="text-sm text-zinc-400 font-medium">{user?.email}</span>
-        <button
-          onClick={logout}
-          className="p-1.5 text-zinc-500 hover:text-zinc-100 transition-colors"
-          title="Logout"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
+      <div className="absolute top-6 right-6 flex items-center gap-4">
+        <div className="flex items-center gap-3 bg-chess-card border border-zinc-700/50 rounded-full px-4 py-2 shadow-lg">
+          <div className="w-8 h-8 bg-chess-green rounded-full flex items-center justify-center text-white font-bold text-sm">
+            {user?.email?.[0].toUpperCase()}
+          </div>
+          <span className="text-sm text-white font-medium">{user?.email?.split('@')[0]}</span>
+          <button
+            onClick={logout}
+            className="p-1.5 text-chess-secondary hover:text-white transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="w-full max-w-2xl text-center space-y-12">
         <div>
-          <h1 className="text-5xl font-black text-zinc-50 tracking-tighter mb-4">CHESS SERVICE</h1>
-          <p className="text-zinc-500 text-lg">Choose your battle mode</p>
+          <h1 className="text-6xl font-bold text-white tracking-tight mb-4 flex items-center justify-center gap-4">
+            <span className="text-7xl">♟</span> Chess
+          </h1>
+          <p className="text-chess-secondary text-xl font-medium">Choose your game mode</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Two Players Card */}
-          <button
-            onClick={() => navigate('/game')}
-            className="group relative bg-zinc-900 border border-zinc-800 rounded-3xl p-8 transition-all hover:border-zinc-600 hover:scale-[1.02] overflow-hidden text-left"
-          >
-            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
-              <Users className="text-zinc-100 w-8 h-8" />
+          <div className="group relative bg-chess-card border-2 border-transparent rounded-3xl p-8 transition-all hover:border-chess-green shadow-xl text-left flex flex-col h-full">
+            <div className="w-20 h-20 bg-chess-bg rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner">
+              <Users className="text-chess-green w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-zinc-50 mb-2">Two Players</h2>
-            <p className="text-zinc-500 text-sm leading-relaxed">
-              Challenge a friend locally on the same device. Perfect for practice and local duels.
+            <h2 className="text-3xl font-bold text-white mb-3">Play Locally</h2>
+            <p className="text-chess-secondary text-base leading-relaxed mb-8 flex-grow">
+              Challenge a friend locally on the same device. Perfect for practice and face-to-face duels.
             </p>
-            <div className="mt-8 flex items-center text-zinc-300 font-semibold group-hover:translate-x-2 transition-transform">
-              Play Locally →
-            </div>
-          </button>
+            <button
+              onClick={() => navigate('/game')}
+              className="w-full py-4 bg-chess-green hover:brightness-110 text-white font-bold rounded-2xl transition-all shadow-lg text-center text-lg"
+            >
+              Play Locally
+            </button>
+          </div>
 
           {/* Online Card */}
-          <button
-            onClick={() => navigate('/online')}
-            className="group relative bg-zinc-900 border border-zinc-800 rounded-3xl p-8 transition-all hover:border-zinc-600 hover:scale-[1.02] overflow-hidden text-left"
-          >
-            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-zinc-700 transition-colors">
-              <Globe className="text-zinc-100 w-8 h-8" />
+          <div className="group relative bg-chess-card border-2 border-transparent rounded-3xl p-8 transition-all hover:border-chess-green shadow-xl text-left flex flex-col h-full">
+            <div className="w-20 h-20 bg-chess-bg rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner">
+              <Globe className="text-chess-green w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-zinc-50 mb-2">Online</h2>
-            <p className="text-zinc-500 text-sm leading-relaxed">
-              Find opponents from around the world and climb the leaderboards.
+            <h2 className="text-3xl font-bold text-white mb-3">Play Online</h2>
+            <p className="text-chess-secondary text-base leading-relaxed mb-8 flex-grow">
+              Find opponents from around the world and test your skills in real-time.
             </p>
-            <div className="mt-8 flex items-center text-zinc-300 font-semibold group-hover:translate-x-2 transition-transform">
-              Join Lobby →
-            </div>
-          </button>
+            <button
+              onClick={() => navigate('/online')}
+              className="w-full py-4 bg-chess-green hover:brightness-110 text-white font-bold rounded-2xl transition-all shadow-lg text-center text-lg"
+            >
+              Play Online
+            </button>
+          </div>
         </div>
       </div>
     </div>

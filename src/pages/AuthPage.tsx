@@ -45,39 +45,37 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex border-b border-zinc-800">
+    <div className="min-h-screen bg-chess-bg flex flex-col items-center justify-center p-4">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-white flex items-center gap-2">
+          <span className="text-5xl">♟</span> Chess
+        </h1>
+      </div>
+
+      <div className="w-full max-w-md bg-chess-card rounded-xl shadow-2xl overflow-hidden border-none">
+        <div className="flex border-b border-zinc-700/50">
           <button
-            className={`flex-1 py-4 text-sm font-medium transition-colors ${
-              isLogin ? 'text-zinc-100 bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-300'
+            className={`flex-1 py-4 text-sm font-bold transition-all relative ${
+              isLogin ? 'text-white' : 'text-chess-secondary hover:text-zinc-300'
             }`}
             onClick={() => { setIsLogin(true); setError(null); }}
           >
-            Login
+            Log In
+            {isLogin && <div className="absolute bottom-0 left-0 w-full h-1 bg-chess-green" />}
           </button>
           <button
-            className={`flex-1 py-4 text-sm font-medium transition-colors ${
-              !isLogin ? 'text-zinc-100 bg-zinc-800/50' : 'text-zinc-500 hover:text-zinc-300'
+            className={`flex-1 py-4 text-sm font-bold transition-all relative ${
+              !isLogin ? 'text-white' : 'text-chess-secondary hover:text-zinc-300'
             }`}
             onClick={() => { setIsLogin(false); setError(null); }}
           >
-            Register
+            Sign Up
+            {!isLogin && <div className="absolute bottom-0 left-0 w-full h-1 bg-chess-green" />}
           </button>
         </div>
 
         <div className="p-8">
-          <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center">
-              {isLogin ? <LogIn className="text-zinc-100" /> : <UserPlus className="text-zinc-100" />}
-            </div>
-          </div>
-
-          <h1 className="text-2xl font-bold text-center text-zinc-50 mb-8">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
-          </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm text-center">
                 {error}
@@ -85,49 +83,46 @@ export default function AuthPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Email</label>
               <input
                 type="email"
                 required
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition-all"
+                className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="Email"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-1">Password</label>
               <input
                 type="password"
                 required
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition-all"
+                className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Password"
               />
             </div>
 
             {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Confirm Password</label>
                 <input
                   type="password"
                   required
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-700 transition-all"
+                  className="w-full bg-chess-input border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-chess-green transition-all placeholder:text-zinc-600"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Confirm Password"
                 />
               </div>
             )}
 
             <button
               disabled={loading}
-              className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 mt-4"
+              className="w-full bg-chess-green hover:brightness-110 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 mt-2 shadow-lg"
             >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isLogin ? 'Sign In' : 'Sign Up'}
+              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+              {isLogin ? 'Log In' : 'Sign Up'}
             </button>
           </form>
         </div>

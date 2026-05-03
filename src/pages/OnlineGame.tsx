@@ -221,8 +221,8 @@ export default function OnlineGame() {
                   arePiecesDraggable={true}
                   onPieceDrop={(sourceSquare: string, targetSquare: string) => {
                     const ws = socketRef.current
-                    if (!ws || ws.readyState !== 1 || status !== 'playing') return false
-                    console.log("[DROP] Sending move, status:", status, "ws state:", ws?.readyState)
+                    console.log("[DROP] status from ref:", statusRef.current, "ws:", ws?.readyState)
+                    if (!ws || ws.readyState !== 1 || statusRef.current !== 'playing') return false
                     ws.send(JSON.stringify({ type: 'move', from: sourceSquare, to: targetSquare, promotion: 'q' }))
                     return true
                   }}

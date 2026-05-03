@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Crown, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const THEMES = [
   {
@@ -42,10 +43,16 @@ const THEME_COLORS: Record<string, { bg: string; accent: string }> = {
 
 export default function PremiumPage() {
   const navigate = useNavigate();
-  const [isPro, setIsPro] = useState(() => localStorage.getItem('isPro') === 'true');
-  const [selectedTheme, setSelectedTheme] = useState(
-    () => localStorage.getItem('pieceTheme') || 'classic'
-  );
+  const { user } = useAuth();
+  
+  const [isPro, setIsPro] = useState(() => {
+    if (!user) return false;
+    return localStorage.getItem(`isPro_${user.username}`) === 'true';
+  });
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    if (!user) return 'classic';
+    return localStorage.getItem(`pieceTheme_${user.username}`) || 'classic';
+  });
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -53,14 +60,16 @@ export default function PremiumPage() {
   }, [selectedTheme]);
 
   const handleActivate = () => {
-    localStorage.setItem('pieceTheme', selectedTheme);
-    window.dispatchEvent(new StorageEvent('storage', { key: 'pieceTheme' }));
+    if (!user) return;
+    localStorage.setItem(`pieceTheme_${user.username}`, selectedTheme);
+    window.dispatchEvent(new StorageEvent('storage', { key: `pieceTheme_${user.username}` }));
     setSaved(true);
   };
 
   const handleGetPro = () => {
-    localStorage.setItem('isPro', 'true');
-    window.dispatchEvent(new StorageEvent('storage', { key: 'isPro' }));
+    if (!user) return;
+    localStorage.setItem(`isPro_${user.username}`, 'true');
+    window.dispatchEvent(new StorageEvent('storage', { key: `isPro_${user.username}` }));
     setIsPro(true);
   };
 

@@ -72,22 +72,32 @@ export default function QuizGame() {
   
   const timerRef = useRef<any>(null);
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  const [pieceTheme, setPieceTheme] = useState(localStorage.getItem('pieceTheme') || 'classic');
-  const [isPro, setIsPro] = useState(() => localStorage.getItem('isPro') === 'true');
+  const [pieceTheme, setPieceTheme] = useState(() => {
+    if (!user) return 'classic';
+    return localStorage.getItem(`pieceTheme_${user.username}`) || 'classic';
+  });
+  const [isPro, setIsPro] = useState(() => {
+    if (!user) return false;
+    return localStorage.getItem(`isPro_${user.username}`) === 'true';
+  });
   const [gamesPlayedToday, setGamesPlayedToday] = useState(0);
   const [timeToMidnight, setTimeToMidnight] = useState('');
 
   useEffect(() => {
+    if (!user) {
+      setGamesPlayedToday(0);
+      return;
+    }
     const today = new Date().toISOString().split('T')[0];
-    const savedDate = localStorage.getItem('quizGamesDate');
+    const savedDate = localStorage.getItem(`quizGamesDate_${user.username}`);
     if (savedDate !== today) {
-      localStorage.setItem('quizGamesDate', today);
-      localStorage.setItem('quizGamesCount', '0');
+      localStorage.setItem(`quizGamesDate_${user.username}`, today);
+      localStorage.setItem(`quizGamesCount_${user.username}`, '0');
       setGamesPlayedToday(0);
     } else {
-      setGamesPlayedToday(parseInt(localStorage.getItem('quizGamesCount') || '0', 10));
+      setGamesPlayedToday(parseInt(localStorage.getItem(`quizGamesCount_${user.username}`) || '0', 10));
     }
 
     const interval = setInterval(() => {
@@ -102,15 +112,16 @@ export default function QuizGame() {
     }, 1000);
 
     const handleStorage = () => {
-      setPieceTheme(localStorage.getItem('pieceTheme') || 'classic');
-      setIsPro(localStorage.getItem('isPro') === 'true');
+      if (!user) return;
+      setPieceTheme(localStorage.getItem(`pieceTheme_${user.username}`) || 'classic');
+      setIsPro(localStorage.getItem(`isPro_${user.username}`) === 'true');
     };
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
     };
-  }, []);
+  }, [user]);
   const PIECES = ['wP','wN','wB','wR','wQ','wK','bP','bN','bB','bR','bQ','bK'] as const;
   const customPieces = pieceTheme !== 'classic'
     ? Object.fromEntries(
@@ -304,9 +315,9 @@ export default function QuizGame() {
   const startWithTime = () => {
     if (!tempSelectedTime) return;
     
-    if (!isPro) {
+    if (!isPro && user) {
       const newCount = gamesPlayedToday + 1;
-      localStorage.setItem('quizGamesCount', newCount.toString());
+      localStorage.setItem(`quizGamesCount_${user.username}`, newCount.toString());
       setGamesPlayedToday(newCount);
     }
 

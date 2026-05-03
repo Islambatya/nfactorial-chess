@@ -39,15 +39,15 @@ export default function ChessGame() {
   
   const timerRef = useRef<any>(null);
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  const [pieceTheme, setPieceTheme] = useState(localStorage.getItem('pieceTheme') || 'classic');
-  const [isPro, setIsPro] = useState(() => localStorage.getItem('isPro') === 'true');
+  const [pieceTheme, setPieceTheme] = useState(localStorage.getItem(`pieceTheme_${user?.username}`) || 'classic');
+  const [isPro, setIsPro] = useState(() => localStorage.getItem(`isPro_${user?.username}`) === 'true');
 
   useEffect(() => {
     const handleStorage = () => {
-      setPieceTheme(localStorage.getItem('pieceTheme') || 'classic');
-      setIsPro(localStorage.getItem('isPro') === 'true');
+      setPieceTheme(localStorage.getItem(`pieceTheme_${user?.username}`) || 'classic');
+      setIsPro(localStorage.getItem(`isPro_${user?.username}`) === 'true');
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);

@@ -10,11 +10,11 @@ export default function MenuPage() {
     <div className="min-h-screen bg-[#262421] flex flex-col items-center justify-center p-4 relative">
       {/* Header */}
       <div className="absolute top-6 right-6 flex items-center gap-4">
-        <div className="flex items-center gap-3 bg-[#312e2b] border border-zinc-700/50 rounded-full px-4 py-2 shadow-lg">
-          <div className="w-8 h-8 bg-[#81b64c] rounded-full flex items-center justify-center text-white font-bold text-sm">
-            {user?.email?.[0].toUpperCase()}
+        <div className="flex items-center gap-4 bg-zinc-800/50 px-4 py-2 rounded-xl border border-zinc-700/50">
+          <div className="w-8 h-8 bg-chess-green rounded-lg flex items-center justify-center font-bold text-white shadow-lg">
+            {user?.username?.[0].toUpperCase()}
           </div>
-          <span className="text-sm text-white font-medium">{user?.email?.split('@')[0]}</span>
+          <span className="text-sm text-white font-medium">{user?.username}</span>
           <button
             onClick={logout}
             className="p-1.5 text-zinc-500 hover:text-white transition-colors"

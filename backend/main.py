@@ -125,11 +125,11 @@ load_rooms()
 
 # Models
 class UserCreate(BaseModel):
-    email: str
+    username: str
     password: str
 
 class UserLogin(BaseModel):
-    email: str
+    username: str
     password: str
 
 class Token(BaseModel):
@@ -179,30 +179,30 @@ async def get_ws_user_email(token: str):
 # REST Endpoints
 @app.post("/register", response_model=Token)
 async def register(user: UserCreate):
-    if get_user(user.email):
-        raise HTTPException(status_code=400, detail="Email already registered")
+    if get_user(user.username):
+        raise HTTPException(status_code=400, detail="Username already registered")
     hashed_password = pwd_context.hash(user.password)
     conn = get_db()
-    conn.execute("INSERT INTO users (email, hashed_password) VALUES (?, ?)", (user.email, hashed_password))
+    conn.execute("INSERT INTO users (email, hashed_password) VALUES (?, ?)", (user.username, hashed_password))
     conn.commit()
     conn.close()
-    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
+    access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return {"access_token": access_token, "token_type": "bearer", "user": {"username": user.username}}
 
 @app.post("/login", response_model=Token)
 async def login(user: UserLogin):
-    print(f"[AUTH] Login attempt for: {user.email}")
-    db_user = get_user(user.email)
+    print(f"[AUTH] Login attempt for: {user.username}")
+    db_user = get_user(user.username)
     if not db_user:
-        print(f"[AUTH] Login failed: User not found: {user.email}")
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        print(f"[AUTH] Login failed: User not found: {user.username}")
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
     if not pwd_context.verify(user.password, db_user["hashed_password"]):
-        print(f"[AUTH] Login failed: Invalid password for: {user.email}")
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        print(f"[AUTH] Login failed: Invalid password for: {user.username}")
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
     
-    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    print(f"[AUTH] Login successful for: {user.email}")
-    return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email}}
+    access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    print(f"[AUTH] Login successful for: {user.username}")
+    return {"access_token": access_token, "token_type": "bearer", "user": {"username": user.username}}
 
 @app.post("/rooms/create", response_model=RoomResponse)
 async def create_room(email: str = Depends(get_current_user_email)):
@@ -275,7 +275,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     print(f"[WS] Connection established for {email} in room {room_id}")
 
     # Determine color
-    color = "white" if room["players"][0] == email else "black"
+    color = "w" if room["players"][0] == email else "b"
     print(f"[WS] Assigned {color} to {email}")
     
     # Notify others
@@ -295,7 +295,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await websocket.send_json({
         "type": "state",
         "fen": room["board"].fen(),
-        "turn": "white" if room["board"].turn == chess.WHITE else "black",
+        "turn": room["board"].turn,
         "color": color,
         "opponent": opponent_email
     })

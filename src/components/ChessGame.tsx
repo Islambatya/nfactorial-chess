@@ -144,7 +144,7 @@ export default function ChessGame() {
 
   const handleNewGame = () => {
     setGame(new Chess());
-    setFen('start');
+    setFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     setIsGameOver(false);
     setWinner(null);
     setReason(null);

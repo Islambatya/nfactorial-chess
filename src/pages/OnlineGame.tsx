@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function OnlineGame() {
   const { roomId } = useParams<{ roomId: string }>();
-  const [game, setGame] = useState(new Chess());
+  const [, setGame] = useState(new Chess());
   const [fen, setFen] = useState('start');
   const [playerColor, setPlayerColor] = useState<'white' | 'black' | null>(null);
   const [turn, setTurn] = useState<'white' | 'black'>('white');
@@ -123,31 +123,6 @@ export default function OnlineGame() {
     };
   }, [roomId, token]);
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
-    if (status !== 'playing' || turn !== playerColor) return false;
-
-    try {
-      const move = { from: sourceSquare, to: targetSquare, promotion: 'q' };
-      const gameCopy = new Chess(game.fen());
-      const moveResult = gameCopy.move(move);
-      
-      if (!moveResult) return false;
-
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({
-          type: 'move',
-          from: sourceSquare,
-          to: targetSquare,
-          promotion: 'q'
-        }));
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  };
-
   const copyCode = () => {
     if (roomId) {
       navigator.clipboard.writeText(roomId);
@@ -238,12 +213,22 @@ export default function OnlineGame() {
               return (
                 <AnyChessboard 
                   position={fen}
-                  onPieceDrop={onDrop}
+                  arePiecesDraggable={true}
+                  onPieceDrop={(sourceSquare: string, targetSquare: string) => {
+                    const ws = socketRef.current
+                    if (!ws || ws.readyState !== 1) return false
+                    ws.send(JSON.stringify({ 
+                      type: 'move', 
+                      from: sourceSquare, 
+                      to: targetSquare, 
+                      promotion: 'q' 
+                    }))
+                    return true
+                  }}
                   boardOrientation={playerColor || "white"}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}
                   customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
                   animationDuration={200}
-                  arePiecesDraggable={playerColor === turn && status === 'playing'}
                 />
               );
             })()}

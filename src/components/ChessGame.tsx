@@ -29,10 +29,17 @@ export default function ChessGame() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
+
+  // Player names
+  const [whiteName, setWhiteName] = useState('White');
+  const [blackName, setBlackName] = useState('Black');
+  const [namesEntered, setNamesEntered] = useState(false);
+  const [tempWhiteName, setTempWhiteName] = useState('');
+  const [tempBlackName, setTempBlackName] = useState('');
   
   const timerRef = useRef<any>(null);
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -63,14 +70,12 @@ export default function ChessGame() {
   const saveGame = useCallback(async (gameInstance: Chess, gameWinner: string) => {
     if (!token) return;
     try {
-      const whitePlayer = user?.username || 'White';
-      const blackPlayer = 'Black';
       await fetch(`${getApiUrl()}/history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          white_player: whitePlayer,
-          black_player: blackPlayer,
+          white_player: whiteName,
+          black_player: blackName,
           pgn: gameInstance.pgn(),
           result: gameWinner,
         }),
@@ -79,7 +84,7 @@ export default function ChessGame() {
     } catch (e) {
       console.error('[History] Failed to save game:', e);
     }
-  }, [token, user]);
+  }, [token, whiteName, blackName]);
 
   const finishGame = useCallback((_gameInstance: Chess, gameWinner: string, gameReason: string) => {
     if (isGameOver) return;
@@ -175,7 +180,16 @@ export default function ChessGame() {
     setIsGameSaved(false);
     setSelectedTime(null);
     setTempSelectedTime(null);
+    setNamesEntered(false);
+    setTempWhiteName('');
+    setTempBlackName('');
     if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  const handleNamesSubmit = () => {
+    setWhiteName(tempWhiteName.trim() || 'White');
+    setBlackName(tempBlackName.trim() || 'Black');
+    setNamesEntered(true);
   };
 
   return (
@@ -203,7 +217,7 @@ export default function ChessGame() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-4xl font-bold uppercase tracking-tight text-white">
-                    {winner === 'Draw' ? 'Draw!' : `${winner} Wins!`}
+                    {winner === 'Draw' ? 'Draw!' : winner === 'White' ? `${whiteName} Wins!` : winner === 'Black' ? `${blackName} Wins!` : `${winner} Wins!`}
                   </h2>
                   <p className="text-zinc-500 font-bold text-xl uppercase tracking-widest">{reason}</p>
                 </div>
@@ -215,7 +229,7 @@ export default function ChessGame() {
                       className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
                     >
                       <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
-                      Destroy White
+                      Destroy {whiteName}
                     </button>
                     <button 
                       onClick={() => handleAnalysis(game.pgn(), 'black')} 
@@ -223,7 +237,7 @@ export default function ChessGame() {
                       className="py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm flex items-center justify-center gap-2 border border-zinc-700 disabled:opacity-50"
                     >
                       <BrainCircuit className={`w-4 h-4 ${isAnalyzing ? 'animate-pulse text-[#81b64c]' : 'text-[#81b64c]'}`} />
-                      Destroy Black
+                      Destroy {blackName}
                     </button>
                   </div>
                   {isAnalyzing && (
@@ -247,11 +261,58 @@ export default function ChessGame() {
 
       {/* Right Sidebar */}
       <div className="w-full lg:w-[400px] bg-[#312e2b] flex flex-col border-l border-zinc-800 shadow-2xl">
-        {!selectedTime ? (
+        {!namesEntered ? (
+          /* Step 1: Player Name Entry */
+          <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
+            <div className="p-8 border-b border-zinc-800">
+              <h2 className="text-xl font-bold tracking-tight">Player Names</h2>
+              <p className="text-zinc-500 text-sm mt-1">Enter names before starting</p>
+            </div>
+            <div className="p-6 flex-1 space-y-6">
+              <div className="space-y-2">
+                <label className="text-zinc-500 text-xs font-black uppercase tracking-[0.2em]">⬜ White Player</label>
+                <input
+                  type="text"
+                  value={tempWhiteName}
+                  onChange={e => setTempWhiteName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleNamesSubmit()}
+                  placeholder="White"
+                  className="w-full px-4 py-3 bg-[#2c2c2c] border border-[#4a4a4a] focus:border-[#81b64c] text-white rounded-md outline-none transition-all font-semibold placeholder:text-zinc-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-zinc-500 text-xs font-black uppercase tracking-[0.2em]">⬛ Black Player</label>
+                <input
+                  type="text"
+                  value={tempBlackName}
+                  onChange={e => setTempBlackName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleNamesSubmit()}
+                  placeholder="Black"
+                  className="w-full px-4 py-3 bg-[#2c2c2c] border border-[#4a4a4a] focus:border-[#81b64c] text-white rounded-md outline-none transition-all font-semibold placeholder:text-zinc-600"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-zinc-800">
+              <button
+                onClick={handleNamesSubmit}
+                className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold text-base rounded-md transition-all shadow-lg uppercase tracking-wider"
+              >
+                Continue →
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="w-full mt-4 py-2 text-zinc-600 hover:text-zinc-400 text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Back to Menu
+              </button>
+            </div>
+          </div>
+        ) : !selectedTime ? (
           <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
             <div className="p-8 border-b border-zinc-800">
               <h2 className="text-xl font-bold tracking-tight">Time Control</h2>
-              <p className="text-zinc-500 text-sm mt-1">Select a game mode</p>
+              <p className="text-zinc-500 text-sm mt-1">{whiteName} vs {blackName}</p>
             </div>
             
             <div className="p-6 space-y-8 flex-1 overflow-y-auto">
@@ -303,7 +364,7 @@ export default function ChessGame() {
           <div className="flex flex-col h-full p-8 animate-in slide-in-from-right duration-300 space-y-12">
             {/* Black Timer */}
             <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'b' ? 'bg-[#262421] border-[#81b64c]' : 'bg-transparent border-transparent opacity-40'}`}>
-              <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">Black</p>
+            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">{blackName}</p>
               <div className={`text-6xl font-mono font-bold text-center ${blackTime < 10 && game.turn() === 'b' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                 {formatTime(blackTime)}
               </div>
@@ -317,7 +378,7 @@ export default function ChessGame() {
 
             {/* White Timer */}
             <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'w' ? 'bg-[#262421] border-[#81b64c]' : 'bg-transparent border-transparent opacity-40'}`}>
-              <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">White</p>
+            <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">{whiteName}</p>
               <div className={`text-6xl font-mono font-bold text-center ${whiteTime < 10 && game.turn() === 'w' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
                 {formatTime(whiteTime)}
               </div>

@@ -36,7 +36,7 @@ export default function AuthPage() {
       if (!response.ok) throw new Error(data.detail || 'Auth failed');
 
       login(data.access_token, data.user);
-      navigate('/');
+      navigate('/menu');
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -14,7 +14,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (isLoading) return <div className="min-h-screen bg-[#262421] flex items-center justify-center text-zinc-500">Loading...</div>;
   
   if (!token) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;

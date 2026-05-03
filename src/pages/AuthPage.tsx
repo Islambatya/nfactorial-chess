@@ -7,6 +7,7 @@ import { getApiUrl } from '../lib/api';
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,10 +28,14 @@ export default function AuthPage() {
 
     try {
       const endpoint = isLogin ? '/login' : '/register';
+      const bodyPayload = isLogin 
+        ? { email, password } 
+        : { email, username, password };
+
       const response = await fetch(`${getApiUrl()}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: email, password }),
+        body: JSON.stringify(bodyPayload),
       });
 
       const data = await response.json();
@@ -93,6 +98,19 @@ export default function AuthPage() {
                 placeholder="Email"
               />
             </div>
+
+            {!isLogin && (
+              <div>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-[#2c2c2c] border border-[#4a4a4a] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#81b64c] transition-all placeholder:text-zinc-600"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Choose a username"
+                />
+              </div>
+            )}
 
             <div>
               <input

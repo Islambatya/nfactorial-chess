@@ -67,9 +67,14 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             hashed_password TEXT NOT NULL,
+            username TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN username TEXT")
+    except Exception:
+        pass
     conn.execute("""
         CREATE TABLE IF NOT EXISTS game_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,11 +145,12 @@ load_rooms()
 
 # Models
 class UserCreate(BaseModel):
-    username: str
+    email: EmailStr
     password: str
+    username: str
 
 class UserLogin(BaseModel):
-    username: str
+    email: EmailStr
     password: str
 
 class Token(BaseModel):
@@ -207,30 +213,31 @@ async def get_ws_user_email(token: str):
 # REST Endpoints
 @app.post("/register", response_model=Token)
 async def register(user: UserCreate):
-    if get_user(user.username):
-        raise HTTPException(status_code=400, detail="Username already registered")
+    if get_user(user.email):
+        raise HTTPException(status_code=400, detail="Email already registered")
     hashed_password = pwd_context.hash(user.password)
     conn = get_db()
-    conn.execute("INSERT INTO users (email, hashed_password) VALUES (?, ?)", (user.username, hashed_password))
+    conn.execute("INSERT INTO users (email, hashed_password, username) VALUES (?, ?, ?)", 
+                 (user.email, hashed_password, user.username))
     conn.commit()
     conn.close()
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"access_token": access_token, "token_type": "bearer", "user": {"username": user.username}}
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return {"access_token": access_token, "token_type": "bearer", "user": {"email": user.email, "username": user.username}}
 
 @app.post("/login", response_model=Token)
 async def login(user: UserLogin):
-    print(f"[AUTH] Login attempt for: {user.username}")
-    db_user = get_user(user.username)
+    print(f"[AUTH] Login attempt for: {user.email}")
+    db_user = get_user(user.email)
     if not db_user:
-        print(f"[AUTH] Login failed: User not found: {user.username}")
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        print(f"[AUTH] Login failed: User not found: {user.email}")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     if not pwd_context.verify(user.password, db_user["hashed_password"]):
-        print(f"[AUTH] Login failed: Invalid password for: {user.username}")
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        print(f"[AUTH] Login failed: Invalid password for: {user.email}")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     
-    access_token = create_access_token(data={"sub": user.username}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    print(f"[AUTH] Login successful for: {user.username}")
-    return {"access_token": access_token, "token_type": "bearer", "user": {"username": user.username}}
+    access_token = create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    print(f"[AUTH] Login successful for: {user.email}")
+    return {"access_token": access_token, "token_type": "bearer", "user": {"email": db_user["email"], "username": db_user["username"]}}
 
 @app.post("/rooms/create", response_model=RoomResponse)
 async def create_room(email: str = Depends(get_current_user_email)):
@@ -306,26 +313,32 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     color = "white" if room["players"][0] == email else "black"
     print(f"[WS] Assigned {color} to {email}")
     
+    db_user = get_user(email)
+    username = db_user["username"] if db_user else email
+
     # Notify others
     for p_email, conn in room["connections"].items():
         if p_email != email:
             print(f"[WS] Notifying {p_email} that {email} joined")
             await conn.send_json({
                 "type": "opponent_joined",
-                "username": email
+                "username": username
             })
         
     # Send initial state
     opponent_email = None
+    opponent_username = None
     if len(room["players"]) > 1:
         opponent_email = room["players"][1] if color == "white" else room["players"][0]
+        opp_db = get_user(opponent_email)
+        opponent_username = opp_db["username"] if opp_db else opponent_email
 
     await websocket.send_json({
         "type": "state",
         "fen": room["board"].fen(),
         "turn": "white" if room["board"].turn == chess.WHITE else "black",
         "color": color,
-        "opponent": opponent_email
+        "opponent": opponent_username
     })
     print(f"[WS] Initial state sent to {email}")
 

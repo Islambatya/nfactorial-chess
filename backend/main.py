@@ -147,7 +147,7 @@ load_rooms()
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    username: str
+    username: str = ""
 
 class UserLogin(BaseModel):
     email: EmailStr

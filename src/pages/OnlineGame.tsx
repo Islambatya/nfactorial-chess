@@ -125,26 +125,7 @@ export default function OnlineGame() {
     };
   }, [roomId, token]);
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
-    const ws = socketRef.current
-    console.log("[DROP] piece drop", sourceSquare, "->", targetSquare, "ws state:", ws?.readyState, "status:", status, "playerColor:", playerColor, "turn:", turn)
-    if (!ws || ws.readyState !== 1) {
-      console.log("[DROP] REJECTED: ws not ready")
-      return false
-    }
-    if (status !== 'playing') {
-      console.log("[DROP] REJECTED: status is", status)
-      return false
-    }
-    if (turn !== playerColor) {
-      console.log("[DROP] REJECTED: not your turn. turn=", turn, "playerColor=", playerColor)
-      return false
-    }
-    const msg = JSON.stringify({ type: 'move', from: sourceSquare, to: targetSquare, promotion: 'q' })
-    console.log("[DROP] Sending:", msg)
-    ws.send(msg)
-    return false
-  };
+
 
   const copyCode = () => {
     if (roomId) {
@@ -237,12 +218,13 @@ export default function OnlineGame() {
                 <AnyChessboard 
                   position={fen}
                   arePiecesDraggable={true}
-                  isDraggablePiece={({ piece }: any) => {
-                    const isWhitePiece = piece.startsWith('w');
-                    return playerColor === 'white' ? isWhitePiece : !isWhitePiece;
+                  onPieceDrop={(sourceSquare: string, targetSquare: string) => {
+                    const ws = socketRef.current
+                    if (!ws || ws.readyState !== 1 || status !== 'playing') return false
+                    ws.send(JSON.stringify({ type: 'move', from: sourceSquare, to: targetSquare, promotion: 'q' }))
+                    return true
                   }}
-                  onPieceDrop={onDrop}
-                  boardOrientation={playerColor === 'black' ? "black" : "white"}
+                  boardOrientation={playerColor === 'black' ? 'black' : 'white'}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}
                   customLightSquareStyle={{ backgroundColor: '#f0d9b5' }}
                   animationDuration={200}

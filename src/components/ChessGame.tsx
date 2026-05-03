@@ -127,7 +127,8 @@ export default function ChessGame() {
   }, [game, isGameOver, finishGame]);
 
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    if (!selectedTime || !targetSquare) return false;
+    if (!selectedTime) return false;
+    if (!targetSquare) return false;
     return makeMove({ from: sourceSquare, to: targetSquare, promotion: 'q' });
   };
 

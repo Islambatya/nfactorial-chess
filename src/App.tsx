@@ -5,6 +5,7 @@ import MenuPage from './pages/MenuPage';
 import ChessGame from './components/ChessGame';
 import OnlineLobby from './pages/OnlineLobby';
 import OnlineGame from './pages/OnlineGame';
+import HistoryPage from './pages/HistoryPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token, isLoading } = useAuth();
@@ -51,6 +52,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ChessGame />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/history" 
+        element={
+          <ProtectedRoute>
+            <HistoryPage />
           </ProtectedRoute>
         } 
       />

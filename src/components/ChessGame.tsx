@@ -5,15 +5,16 @@ import { Sparkles, BrainCircuit, X, Flag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const categories = [
-  { name: 'Пуля', icon: '🚀', options: [1, 2] },
-  { name: 'Блиц', icon: '⚡', options: [3, 5] },
-  { name: 'Рапид', icon: '🏃', options: [10, 15, 30] },
-  { name: 'Классика', icon: '♟', options: [45, 60] },
+  { name: 'Bullet', icon: '🚀', options: [1, 2] },
+  { name: 'Blitz', icon: '⚡', options: [3, 5] },
+  { name: 'Rapid', icon: '🏃', options: [10, 15, 30] },
+  { name: 'Classical', icon: '♟', options: [45, 60] },
 ];
 
 export default function ChessGame() {
   const [game, setGame] = useState(new Chess());
   const [fen, setFen] = useState(game.fen());
+  const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [isGameSaved, setIsGameSaved] = useState(false);
   const [coachTip, setCoachTip] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -26,6 +27,7 @@ export default function ChessGame() {
   const [blackTime, setBlackTime] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
   const [gameOverReason, setGameOverReason] = useState<string | null>(null);
+  const [winner, setWinner] = useState<string | null>(null);
   
   const timerRef = useRef<any>(null);
   const navigate = useNavigate();
@@ -35,6 +37,21 @@ export default function ChessGame() {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const saveGameToHistory = useCallback((gameInstance: Chess, result: string, reason: string) => {
+    const gameRecord = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      timeControl: selectedTime + " min",
+      result: result,
+      reason: reason,
+      moves: moveHistory,
+      pgn: gameInstance.pgn()
+    };
+    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+    history.unshift(gameRecord);
+    localStorage.setItem('gameHistory', JSON.stringify(history));
+  }, [selectedTime, moveHistory]);
 
   const handleAnalysis = useCallback(async (pgn: string) => {
     setIsAnalyzing(true);
@@ -49,19 +66,24 @@ export default function ChessGame() {
       setShowCoachModal(true);
     } catch (err: any) {
       console.error("Analysis error:", err);
+      setCoachTip("AI Analysis failed. Make sure the backend is running.");
+      setShowCoachModal(true);
     } finally {
       setIsAnalyzing(false);
     }
   }, []);
 
-  const saveGameResult = useCallback(async (gameInstance: Chess, reason: string) => {
+  const finishGame = useCallback((gameInstance: Chess, gameWinner: string, reason: string) => {
     if (isGameSaved) return;
     setIsGameSaved(true);
     setIsGameOver(true);
+    setWinner(gameWinner);
     setGameOverReason(reason);
     if (timerRef.current) clearInterval(timerRef.current);
-    handleAnalysis(gameInstance.pgn());
-  }, [isGameSaved, handleAnalysis]);
+    
+    const resultString = gameWinner === 'Draw' ? 'Draw' : `${gameWinner} wins`;
+    saveGameToHistory(gameInstance, resultString, reason);
+  }, [isGameSaved, saveGameToHistory]);
 
   useEffect(() => {
     if (selectedTime && !isGameOver) {
@@ -69,7 +91,7 @@ export default function ChessGame() {
         if (game.turn() === 'w') {
           setWhiteTime((prev) => {
             if (prev <= 1) {
-              saveGameResult(game, "Белые просрочили время");
+              finishGame(game, "Black", "on Time");
               return 0;
             }
             return prev - 1;
@@ -77,7 +99,7 @@ export default function ChessGame() {
         } else {
           setBlackTime((prev) => {
             if (prev <= 1) {
-              saveGameResult(game, "Черные просрочили время");
+              finishGame(game, "White", "on Time");
               return 0;
             }
             return prev - 1;
@@ -88,7 +110,7 @@ export default function ChessGame() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [selectedTime, game, isGameOver, saveGameResult]);
+  }, [selectedTime, game, isGameOver, finishGame]);
 
   const makeMove = useCallback((move: { from: string; to: string; promotion?: string }) => {
     if (isGameOver) return false;
@@ -98,11 +120,20 @@ export default function ChessGame() {
       if (result) {
         setGame(gameCopy);
         setFen(gameCopy.fen());
+        setMoveHistory(prev => [...prev, result.san]);
+
         if (gameCopy.isGameOver()) {
-          let reason = "Игра окончена";
-          if (gameCopy.isCheckmate()) reason = `Мат! Победили ${gameCopy.turn() === 'w' ? 'Черные' : 'Белые'}`;
-          else if (gameCopy.isDraw()) reason = "Ничья";
-          saveGameResult(gameCopy, reason);
+          let reason = "Game Over";
+          let gameWinner = "Draw";
+          
+          if (gameCopy.isCheckmate()) {
+            reason = "by Checkmate";
+            gameWinner = gameCopy.turn() === 'w' ? 'Black' : 'White';
+          } else if (gameCopy.isDraw()) {
+            reason = "Draw";
+            gameWinner = "Draw";
+          }
+          finishGame(gameCopy, gameWinner, reason);
         }
         return true;
       }
@@ -110,7 +141,7 @@ export default function ChessGame() {
       return false;
     }
     return false;
-  }, [game, isGameOver, saveGameResult]);
+  }, [game, isGameOver, finishGame]);
 
   const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
     if (!targetSquare) return false;
@@ -124,7 +155,9 @@ export default function ChessGame() {
     setBlackTime(tempSelectedTime * 60);
     setIsGameOver(false);
     setGameOverReason(null);
+    setWinner(null);
     setIsGameSaved(false);
+    setMoveHistory([]);
   };
 
   const resetGame = () => {
@@ -132,15 +165,17 @@ export default function ChessGame() {
     setTempSelectedTime(null);
     setGame(new Chess());
     setFen('start');
+    setMoveHistory([]);
     setIsGameOver(false);
     setGameOverReason(null);
+    setWinner(null);
     setIsGameSaved(false);
     if (timerRef.current) clearInterval(timerRef.current);
   };
 
   const resign = () => {
-    const winner = game.turn() === 'w' ? 'Черные' : 'Белые';
-    saveGameResult(game, `${winner} победили (сдача)`);
+    const gameWinner = game.turn() === 'w' ? 'Black' : 'White';
+    finishGame(game, gameWinner, "by Resignation");
   };
 
   return (
@@ -158,17 +193,35 @@ export default function ChessGame() {
               animationDurationInMs: 200,
             }}
           />
+          
+          {/* New End Game Modal */}
           {isGameOver && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center p-8 rounded-lg animate-in fade-in duration-500">
-              <div className="bg-[#312e2b] border border-zinc-700 p-8 rounded-3xl shadow-2xl space-y-6">
-                <div className="w-16 h-16 bg-[#262421] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-                  <Sparkles className="w-8 h-8 text-[#81b64c]" />
+              <div className="bg-[#312e2b] border border-zinc-700 p-10 rounded-3xl shadow-2xl space-y-8 scale-110">
+                <div className="w-20 h-20 bg-[#262421] rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-zinc-800">
+                  <Sparkles className="w-10 h-10 text-[#81b64c]" />
                 </div>
-                <div className="space-y-1">
-                  <h2 className="text-3xl font-bold uppercase tracking-tight">Игра окончена</h2>
-                  <p className="text-[#81b64c] font-bold text-lg uppercase tracking-wider">{gameOverReason}</p>
+                <div className="space-y-2">
+                  <h2 className="text-4xl font-bold uppercase tracking-tight text-white">
+                    {winner === 'Draw' ? 'Draw!' : `${winner} Wins! ${winner === 'White' ? '♔' : '♚'}`}
+                  </h2>
+                  <p className="text-zinc-500 font-bold text-xl uppercase tracking-widest">{gameOverReason}</p>
                 </div>
-                <button onClick={resetGame} className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg text-lg">Новая игра</button>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handleAnalysis(game.pgn())} 
+                    className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-all shadow-lg text-lg flex items-center justify-center gap-2 border border-zinc-700"
+                  >
+                    <BrainCircuit className="w-5 h-5 text-[#81b64c]" />
+                    🤖 AI Analysis
+                  </button>
+                  <button 
+                    onClick={resetGame} 
+                    className="w-full py-4 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg text-lg"
+                  >
+                    New Game
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -184,12 +237,12 @@ export default function ChessGame() {
             <div className="flex items-center justify-around py-8 border-b border-zinc-800 bg-[#2c2c2c]/30">
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♟</div>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Игрок 1</span>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Player 1</span>
               </div>
               <div className="text-zinc-800 font-black text-xl italic tracking-tighter opacity-50">VS</div>
               <div className="flex flex-col items-center gap-2">
                 <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♙</div>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Игрок 2</span>
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Player 2</span>
               </div>
             </div>
 
@@ -211,7 +264,7 @@ export default function ChessGame() {
                           : 'bg-[#2c2c2c] border-[#4a4a4a] text-white hover:border-[#81b64c]'
                         }`}
                       >
-                        {mins} мин
+                        {mins} min
                       </button>
                     ))}
                   </div>
@@ -227,13 +280,13 @@ export default function ChessGame() {
                   tempSelectedTime ? 'bg-[#81b64c] hover:brightness-110' : 'bg-[#4a4a4a] cursor-not-allowed opacity-50'
                 }`}
               >
-                Начать игру
+                Start Game
               </button>
               <button 
                 onClick={() => navigate('/')}
                 className="w-full mt-4 py-2 text-zinc-600 hover:text-zinc-400 text-[11px] font-black uppercase tracking-[0.2em] transition-colors"
               >
-                Вернуться в меню
+                Back to Menu
               </button>
             </div>
           </div>
@@ -244,10 +297,10 @@ export default function ChessGame() {
               {/* Black Player */}
               <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'b' ? 'bg-[#262421] border-[#81b64c] shadow-[0_0_30px_rgba(129,182,76,0.1)]' : 'bg-transparent border-transparent opacity-60'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-[#2c2c2c] rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl shadow-inner">Ч</div>
+                  <div className="w-12 h-12 bg-zinc-950 rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl shadow-inner">B</div>
                   <div>
-                    <p className="font-bold text-lg">Игрок 2</p>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Черные</p>
+                    <p className="font-bold text-lg">Player 2</p>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Black</p>
                   </div>
                 </div>
                 <div className={`text-5xl font-mono font-bold text-center ${blackTime < 10 && game.turn() === 'b' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
@@ -267,10 +320,10 @@ export default function ChessGame() {
               {/* White Player */}
               <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'w' ? 'bg-[#262421] border-[#81b64c] shadow-[0_0_30px_rgba(129,182,76,0.1)]' : 'bg-transparent border-transparent opacity-60'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-700 text-black font-bold text-xl shadow-lg">Б</div>
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-700 text-black font-bold text-xl shadow-lg">W</div>
                   <div>
-                    <p className="font-bold text-lg">Игрок 1</p>
-                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Белые</p>
+                    <p className="font-bold text-lg">Player 1</p>
+                    <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">White</p>
                   </div>
                 </div>
                 <div className={`text-5xl font-mono font-bold text-center ${whiteTime < 10 && game.turn() === 'w' ? 'text-red-500 animate-pulse' : 'text-white'}`}>
@@ -278,19 +331,37 @@ export default function ChessGame() {
                 </div>
               </div>
 
-              {/* Status / Coach */}
-              <div className="pt-4 space-y-3">
+              {/* Status / Coach / Moves */}
+              <div className="pt-4 space-y-3 overflow-hidden flex flex-col min-h-0">
                 <div className="bg-[#2c2c2c] p-4 rounded-xl border border-zinc-800 flex items-center justify-center gap-3">
                   <BrainCircuit className={`w-5 h-5 ${isAnalyzing ? 'text-[#81b64c] animate-pulse' : 'text-zinc-600'}`} />
                   <span className={`font-bold uppercase tracking-widest text-xs ${isAnalyzing ? 'text-[#81b64c]' : 'text-zinc-500'}`}>
-                    {isAnalyzing ? 'Тренер думает...' : 'Совет тренера готов'}
+                    {isAnalyzing ? 'Coach thinking...' : 'Coach advice ready'}
                   </span>
                 </div>
                 {coachTip && (
                   <button onClick={() => setShowCoachModal(true)} className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-sm font-bold transition-all border border-zinc-700">
-                    Посмотреть совет
+                    View Advice
                   </button>
                 )}
+                
+                {/* Move History Mini List */}
+                <div className="flex-1 overflow-y-auto bg-[#262421]/50 rounded-xl p-4 border border-zinc-800/50">
+                  <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest mb-3">Move History</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {moveHistory.reduce((acc: any[], move, i) => {
+                      if (i % 2 === 0) acc.push([move]);
+                      else acc[acc.length - 1].push(move);
+                      return acc;
+                    }, []).map((pair, i) => (
+                      <div key={i} className="flex gap-2 text-xs font-mono">
+                        <span className="text-zinc-600 w-4">{i + 1}.</span>
+                        <span className="text-zinc-300 flex-1">{pair[0]}</span>
+                        <span className="text-zinc-300 flex-1">{pair[1] || ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -300,13 +371,13 @@ export default function ChessGame() {
                 className="w-full py-4 bg-[#2c2c2c] hover:bg-red-900/40 text-zinc-400 hover:text-red-400 border border-[#4a4a4a] hover:border-red-900/50 rounded-md transition-all font-bold flex items-center justify-center gap-2"
               >
                 <Flag className="w-4 h-4" />
-                Сдаться
+                Resign
               </button>
               <button 
                 onClick={resetGame}
                 className="w-full py-3 text-zinc-600 hover:text-zinc-400 text-[11px] font-black uppercase tracking-widest transition-colors"
               >
-                Новая партия
+                New Game
               </button>
             </div>
           </div>
@@ -324,11 +395,11 @@ export default function ChessGame() {
               <div className="w-16 h-16 bg-[#81b64c]/10 rounded-full flex items-center justify-center border border-[#81b64c]/20">
                 <Sparkles className="w-8 h-8 text-[#81b64c]" />
               </div>
-              <h2 className="text-2xl font-bold text-zinc-50">Анализ тренера</h2>
+              <h2 className="text-2xl font-bold text-zinc-50">Coach Analysis</h2>
               <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 italic text-zinc-300 text-lg leading-relaxed shadow-inner">
                 {coachTip}
               </div>
-              <button onClick={() => setShowCoachModal(false)} className="mt-6 px-8 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-full transition-all shadow-lg">Продолжить</button>
+              <button onClick={() => setShowCoachModal(false)} className="mt-6 px-8 py-3 bg-[#81b64c] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg">Continue</button>
             </div>
           </div>
         </div>

@@ -149,6 +149,7 @@ export default function OnlineGame() {
               return (
                 <AnyChessboard
                   position={fen}
+                  arePiecesDraggable={true}
                   onPieceDrop={onDrop}
                   boardOrientation={playerColorState === 'black' ? 'black' : 'white'}
                   customDarkSquareStyle={{ backgroundColor: '#b58863' }}

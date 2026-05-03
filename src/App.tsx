@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import Landing from './pages/Landing';
 import AuthPage from './pages/AuthPage';
 import MenuPage from './pages/MenuPage';
 import ChessGame from './components/ChessGame';
@@ -10,7 +11,7 @@ import HistoryPage from './pages/HistoryPage';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token, isLoading } = useAuth();
   
-  if (isLoading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">Loading...</div>;
+  if (isLoading) return <div className="min-h-screen bg-[#262421] flex items-center justify-center text-zinc-500">Loading...</div>;
   
   if (!token) {
     return <Navigate to="/auth" replace />;
@@ -22,9 +23,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route 
-        path="/" 
+        path="/menu" 
         element={
           <ProtectedRoute>
             <MenuPage />

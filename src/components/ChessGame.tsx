@@ -20,6 +20,10 @@ export default function ChessGame() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCoachModal, setShowCoachModal] = useState(false);
   
+  // Player Names
+  const [whiteName, setWhiteName] = useState('Player 1');
+  const [blackName, setBlackName] = useState('Player 2');
+  
   // Timer States
   const [tempSelectedTime, setTempSelectedTime] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
@@ -81,9 +85,15 @@ export default function ChessGame() {
     setGameOverReason(reason);
     if (timerRef.current) clearInterval(timerRef.current);
     
-    const resultString = gameWinner === 'Draw' ? 'Draw' : `${gameWinner} wins`;
+    let resultString = "";
+    if (gameWinner === 'Draw') {
+      resultString = 'Draw';
+    } else {
+      const winnerName = gameWinner === 'White' ? whiteName : blackName;
+      resultString = `${winnerName} wins`;
+    }
     saveGameToHistory(gameInstance, resultString, reason);
-  }, [isGameSaved, saveGameToHistory]);
+  }, [isGameSaved, saveGameToHistory, whiteName, blackName]);
 
   useEffect(() => {
     if (selectedTime && !isGameOver) {
@@ -170,6 +180,8 @@ export default function ChessGame() {
     setGameOverReason(null);
     setWinner(null);
     setIsGameSaved(false);
+    setWhiteTime(0);
+    setBlackTime(0);
     if (timerRef.current) clearInterval(timerRef.current);
   };
 
@@ -194,7 +206,7 @@ export default function ChessGame() {
             }}
           />
           
-          {/* New End Game Modal */}
+          {/* End Game Modal */}
           {isGameOver && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center p-8 rounded-lg animate-in fade-in duration-500">
               <div className="bg-[#312e2b] border border-zinc-700 p-10 rounded-3xl shadow-2xl space-y-8 scale-110">
@@ -203,7 +215,7 @@ export default function ChessGame() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-4xl font-bold uppercase tracking-tight text-white">
-                    {winner === 'Draw' ? 'Draw!' : `${winner} Wins! ${winner === 'White' ? '♔' : '♚'}`}
+                    {winner === 'Draw' ? 'Draw!' : `${winner === 'White' ? whiteName : blackName} Wins! ${winner === 'White' ? '♔' : '♚'}`}
                   </h2>
                   <p className="text-zinc-500 font-bold text-xl uppercase tracking-widest">{gameOverReason}</p>
                 </div>
@@ -233,16 +245,26 @@ export default function ChessGame() {
         {!selectedTime ? (
           /* Selection View */
           <div className="flex flex-col h-full animate-in slide-in-from-right duration-300">
-            {/* Sidebar Header */}
+            {/* Sidebar Header - Editable Names */}
             <div className="flex items-center justify-around py-8 border-b border-zinc-800 bg-[#2c2c2c]/30">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♟</div>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Player 1</span>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-xl font-bold border border-zinc-700 shadow-inner">W</div>
+                <input
+                  value={whiteName}
+                  onChange={(e) => setWhiteName(e.target.value)}
+                  className="bg-transparent border-none border-b border-[#4a4a4a] text-white text-[12px] text-center w-[100px] outline-none font-bold uppercase tracking-widest focus:border-[#81b64c] transition-colors"
+                  placeholder="Player 1"
+                />
               </div>
               <div className="text-zinc-800 font-black text-xl italic tracking-tighter opacity-50">VS</div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-2xl border border-zinc-700 shadow-inner">♙</div>
-                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Player 2</span>
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-[#2c2c2c] rounded-full flex items-center justify-center text-xl font-bold border border-zinc-700 shadow-inner">B</div>
+                <input
+                  value={blackName}
+                  onChange={(e) => setBlackName(e.target.value)}
+                  className="bg-transparent border-none border-b border-[#4a4a4a] text-white text-[12px] text-center w-[100px] outline-none font-bold uppercase tracking-widest focus:border-[#81b64c] transition-colors"
+                  placeholder="Player 2"
+                />
               </div>
             </div>
 
@@ -297,9 +319,9 @@ export default function ChessGame() {
               {/* Black Player */}
               <div className={`p-6 rounded-2xl border-2 transition-all ${game.turn() === 'b' ? 'bg-[#262421] border-[#81b64c] shadow-[0_0_30px_rgba(129,182,76,0.1)]' : 'bg-transparent border-transparent opacity-60'}`}>
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-zinc-950 rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl shadow-inner">B</div>
+                  <div className="w-12 h-12 bg-[#2c2c2c] rounded-xl flex items-center justify-center border border-zinc-700 text-white font-bold text-xl shadow-inner">B</div>
                   <div>
-                    <p className="font-bold text-lg">Player 2</p>
+                    <p className="font-bold text-lg">{blackName}</p>
                     <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Black</p>
                   </div>
                 </div>
@@ -322,7 +344,7 @@ export default function ChessGame() {
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-zinc-700 text-black font-bold text-xl shadow-lg">W</div>
                   <div>
-                    <p className="font-bold text-lg">Player 1</p>
+                    <p className="font-bold text-lg">{whiteName}</p>
                     <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">White</p>
                   </div>
                 </div>
